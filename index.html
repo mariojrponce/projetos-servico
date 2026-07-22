@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Ocorrências — ETO Energisa Tocantins</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0A0F1C;
+    --panel:#111A2C;
+    --panel-2:#0D1526;
+    --line:#1E293F;
+    --line-soft:#16213A;
+    --text:#E7ECF5;
+    --muted:#7C8AA8;
+    --muted-2:#4E5D7C;
+    --cyan:#22D3EE;
+    --cyan-dim:#0E7490;
+    --amber:#FBBF24;
+    --amber-dim:#92700B;
+    --red:#F87171;
+    --red-dim:#7F1D1D;
+    --green:#34D399;
+    --purple:#A78BFA;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 15% -10%, rgba(34,211,238,0.06), transparent 60%),
+      radial-gradient(900px 400px at 100% 0%, rgba(167,139,250,0.05), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', system-ui, sans-serif;
+    min-height:100vh;
+  }
+  ::selection{ background: rgba(34,211,238,0.25); }
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:40;
+    background:rgba(10,15,28,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .header-inner{
+    max-width:1500px; margin:0 auto; padding:14px 24px 0 24px;
+  }
+  .header-top{ display:flex; align-items:center; justify-content:space-between; gap:20px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:34px; height:34px; border-radius:8px;
+    background:linear-gradient(135deg, var(--cyan), var(--purple));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; color:#0A0F1C; font-size:15px;
+    flex-shrink:0;
+  }
+  .brand-text h1{
+    font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; margin:0; letter-spacing:0.2px;
+  }
+  .brand-text p{ margin:2px 0 0 0; font-size:11.5px; color:var(--muted); }
+  .header-actions{ display:flex; align-items:center; gap:10px; }
+
+  .pulse-wrap{ height:14px; margin:12px 0 0 0; overflow:hidden; }
+  .pulse-wrap svg{ width:100%; height:14px; display:block; }
+  .pulse-line{
+    stroke:var(--cyan); stroke-width:1.4; fill:none; opacity:0.55;
+    stroke-dasharray: 6 10;
+    animation: dash 3.2s linear infinite;
+  }
+  @keyframes dash{ to{ stroke-dashoffset:-160; } }
+  @media (prefers-reduced-motion: reduce){ .pulse-line{ animation:none; } }
+
+  button{ font-family:inherit; cursor:pointer; }
+  .btn{
+    border:1px solid var(--line); background:var(--panel); color:var(--text);
+    padding:9px 14px; border-radius:8px; font-size:13px; font-weight:600;
+    display:inline-flex; align-items:center; gap:8px;
+    transition:border-color .15s, background .15s;
+  }
+  .btn:hover{ border-color:var(--muted-2); background:var(--panel-2); }
+  .btn.primary{ background:var(--cyan); color:#04222B; border-color:var(--cyan); }
+  .btn.primary:hover{ background:#3ee0f5; }
+  .btn svg{ width:15px; height:15px; }
+
+  .file-input{ display:none; }
+
+  /* ---------- Layout ---------- */
+  .shell{ max-width:1500px; margin:0 auto; padding:22px 24px 60px 24px; }
+
+  .empty-state{
+    margin-top:60px; text-align:center; color:var(--muted);
+    border:1px dashed var(--line); border-radius:var(--radius); padding:70px 20px;
+    background:var(--panel-2);
+  }
+  .empty-state .icon{ width:46px; height:46px; margin:0 auto 18px auto; color:var(--muted-2); }
+  .empty-state h2{ font-family:'Space Grotesk',sans-serif; color:var(--text); font-size:19px; margin:0 0 8px 0; }
+  .empty-state p{ font-size:13.5px; max-width:440px; margin:0 auto; line-height:1.6; }
+  .empty-state .btn{ margin-top:22px; }
+
+  /* ---------- KPI cards ---------- */
+  .kpis{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:18px;
+  }
+  @media (max-width:1100px){ .kpis{ grid-template-columns:repeat(2,1fr);} }
+  .kpi{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 16px; position:relative; overflow:hidden;
+  }
+  .kpi::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:var(--accent, var(--cyan));
+  }
+  .kpi .label{ font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .kpi .value{ font-family:'IBM Plex Mono',monospace; font-size:25px; font-weight:600; margin-top:6px; color:var(--text); }
+  .kpi .sub{ font-size:11px; color:var(--muted-2); margin-top:3px; }
+
+  /* ---------- Day pills ---------- */
+  .day-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 14px; margin-bottom:18px;
+  }
+  .day-panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+  .day-panel-head h3{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin:0; font-weight:700; }
+  .day-panel-head button{
+    background:none; border:none; color:var(--muted-2); font-size:11px; text-decoration:underline; padding:0;
+  }
+  .day-panel-head button:hover{ color:var(--cyan); }
+  .day-pills{ display:flex; flex-wrap:wrap; gap:6px; }
+  .day-pill{
+    width:38px; height:32px; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:7px; font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+    color:var(--muted); background:var(--panel-2); cursor:pointer; transition:.12s; flex-shrink:0;
+  }
+  .day-pill:hover{ border-color:var(--muted-2); color:var(--text); }
+  .day-pill.active{ background:var(--cyan); border-color:var(--cyan); color:#04222B; font-weight:700; }
+
+  /* ---------- Insight cards (causas / reincidência) ---------- */
+  .insights{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+  @media (max-width:1100px){ .insights{ grid-template-columns:repeat(2,1fr);} }
+  .insight-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 16px; position:relative; overflow:hidden;
+  }
+  .insight-card .rank{
+    position:absolute; right:12px; top:12px; font-family:'Space Grotesk',sans-serif; font-size:26px;
+    font-weight:700; color:var(--line); line-height:1;
+  }
+  .insight-card .label{ font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  .insight-card .cause-name{
+    font-size:13px; font-weight:600; color:var(--text); margin-top:8px; line-height:1.35;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:35px;
+  }
+  .insight-card .cause-count{ font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; color:var(--cyan); margin-top:8px; }
+  .insight-card .cause-count span{ font-size:11px; color:var(--muted-2); font-weight:400; font-family:'Inter',sans-serif; margin-left:4px; }
+  .insight-card.recidivism{ border-color:var(--amber-dim); }
+  .insight-card.recidivism .cause-count{ color:var(--amber); }
+  .insight-card .recid-list{ margin-top:8px; font-size:11px; color:var(--muted); line-height:1.6; }
+  .insight-card .recid-list b{ color:var(--text); font-family:'IBM Plex Mono',monospace; }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;
+  }
+  .search{
+    flex:1; min-width:220px; position:relative;
+  }
+  .search input{
+    width:100%; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    padding:10px 12px 10px 36px; border-radius:8px; font-size:13px; outline:none;
+  }
+  .search input:focus{ border-color:var(--cyan-dim); }
+  .search svg{ position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--muted); }
+  .count-pill{
+    font-size:12px; color:var(--muted); background:var(--panel); border:1px solid var(--line);
+    padding:9px 13px; border-radius:8px; font-family:'IBM Plex Mono',monospace; white-space:nowrap;
+  }
+  .count-pill b{ color:var(--cyan); font-weight:600; }
+
+  /* ---------- Table ---------- */
+  .table-wrap{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:auto; max-height:68vh;
+  }
+  table{ border-collapse:collapse; width:100%; font-size:12.5px; min-width:1400px; }
+  thead th{
+    position:sticky; top:0; z-index:5;
+    background:#0D1526; color:var(--muted); text-align:left; font-weight:600;
+    padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap;
+    cursor:pointer; user-select:none; font-size:11px; letter-spacing:0.03em; text-transform:uppercase;
+  }
+  thead th:hover{ color:var(--text); }
+  thead th .arrow{ margin-left:4px; opacity:0.5; font-size:10px; }
+  tbody td{
+    padding:9px 12px; border-bottom:1px solid var(--line-soft); vertical-align:top; color:var(--text);
+  }
+  tbody tr:hover{ background:rgba(34,211,238,0.04); }
+  td.num{ font-family:'IBM Plex Mono',monospace; text-align:right; white-space:nowrap; }
+  td.mono{ font-family:'IBM Plex Mono',monospace; white-space:nowrap; }
+  td.obs{ max-width:320px; color:var(--muted); line-height:1.4; }
+  td.tag-cell{ white-space:nowrap; }
+  .tag{
+    display:inline-block; font-size:10px; font-weight:700; padding:3px 7px; border-radius:5px;
+    margin:1px 3px 1px 0; letter-spacing:0.02em;
+  }
+  .tag.idec{ background:rgba(52,211,153,0.14); color:var(--green); }
+  .tag.ifec{ background:rgba(167,139,250,0.14); color:var(--purple); }
+  .tag.dur{ background:rgba(251,191,36,0.14); color:var(--amber); }
+  .tag.origem{ background:rgba(34,211,238,0.14); color:var(--cyan); }
+  .tag.reinc{ background:rgba(248,113,113,0.14); color:var(--red); }
+
+  .bar-cell{ position:relative; }
+  .bar-bg{
+    position:absolute; left:0; top:0; bottom:0; background:rgba(248,113,113,0.12); z-index:0;
+  }
+  .bar-val{ position:relative; z-index:1; }
+
+  /* ---------- Config Drawer ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(4,7,14,0.55); z-index:50; opacity:0; pointer-events:none;
+    transition:opacity .2s;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+  .drawer{
+    position:fixed; top:0; right:-420px; width:400px; height:100%; z-index:51;
+    background:var(--panel); border-left:1px solid var(--line);
+    transition:right .25s ease; display:flex; flex-direction:column;
+  }
+  .drawer.open{ right:0; }
+  .drawer-head{
+    padding:18px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;
+  }
+  .drawer-head h2{ font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0; }
+  .drawer-head p{ font-size:11.5px; color:var(--muted); margin:3px 0 0 0; }
+  .drawer-close{ background:none; border:none; color:var(--muted); padding:4px; }
+  .drawer-close:hover{ color:var(--text); }
+  .drawer-body{ padding:18px 20px; overflow-y:auto; flex:1; }
+  .drawer-foot{ padding:16px 20px; border-top:1px solid var(--line); display:flex; gap:10px; }
+  .drawer-foot .btn{ flex:1; justify-content:center; }
+
+  .cfg-section{ margin-bottom:22px; }
+  .cfg-section h3{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);
+    margin:0 0 10px 0; font-weight:700;
+  }
+  .cfg-row{ margin-bottom:12px; }
+  .cfg-row label{ display:block; font-size:12.5px; color:var(--text); margin-bottom:5px; }
+  .cfg-row .hint{ font-size:10.5px; color:var(--muted-2); margin-top:4px; line-height:1.4; }
+  .cfg-row input[type=number], .cfg-row input[type=text]{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:8px 10px; border-radius:7px; font-size:13px; font-family:'IBM Plex Mono',monospace; outline:none;
+  }
+  .cfg-row input:focus{ border-color:var(--cyan-dim); }
+  .cfg-row-inline{ display:flex; gap:10px; }
+  .cfg-row-inline > div{ flex:1; }
+
+  .toggle-row{
+    display:flex; align-items:center; justify-content:space-between; padding:9px 0;
+  }
+  .toggle-row span{ font-size:12.5px; }
+  .switch{ position:relative; width:38px; height:21px; flex-shrink:0; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{
+    position:absolute; inset:0; background:var(--line); border-radius:20px; cursor:pointer; transition:.2s;
+  }
+  .slider::before{
+    content:""; position:absolute; width:15px; height:15px; left:3px; top:3px; background:var(--muted);
+    border-radius:50%; transition:.2s;
+  }
+  .switch input:checked + .slider{ background:var(--cyan-dim); }
+  .switch input:checked + .slider::before{ transform:translateX(17px); background:var(--cyan); }
+
+  .radio-group{ display:flex; gap:8px; }
+  .radio-opt{
+    flex:1; text-align:center; padding:8px; border:1px solid var(--line); border-radius:7px;
+    font-size:12px; color:var(--muted); cursor:pointer; transition:.15s;
+  }
+  .radio-opt.active{ border-color:var(--cyan-dim); color:var(--cyan); background:rgba(34,211,238,0.06); }
+
+  .chip-list{ display:flex; flex-wrap:wrap; gap:6px; max-height:150px; overflow-y:auto; padding:2px; }
+  .chip{
+    font-size:11.5px; padding:5px 10px; border-radius:16px; border:1px solid var(--line);
+    color:var(--muted); cursor:pointer; transition:.15s; background:var(--panel-2);
+  }
+  .chip.active{ border-color:var(--cyan-dim); color:var(--cyan); background:rgba(34,211,238,0.08); }
+
+  .drawer-body::-webkit-scrollbar, .table-wrap::-webkit-scrollbar, .chip-list::-webkit-scrollbar{ width:8px; height:8px; }
+  .drawer-body::-webkit-scrollbar-thumb, .table-wrap::-webkit-scrollbar-thumb, .chip-list::-webkit-scrollbar-thumb{
+    background:var(--line); border-radius:4px;
+  }
+
+  .badge-count{
+    background:var(--cyan); color:#04222B; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px;
+  }
+
+  footer{ text-align:center; padding:24px; color:var(--muted-2); font-size:11px; }
+
+  /* ---------- Nav tabs ---------- */
+  .nav-tabs{ display:flex; gap:4px; margin:12px 0 0 0; }
+  .nav-tab{
+    background:none; border:none; color:var(--muted); font-size:13px; font-weight:600;
+    padding:8px 4px 10px 4px; border-bottom:2px solid transparent; margin-right:18px;
+  }
+  .nav-tab:hover{ color:var(--text); }
+  .nav-tab.active{ color:var(--cyan); border-bottom-color:var(--cyan); }
+
+  /* ---------- Column checklist (config drawer) ---------- */
+  .col-check-list{ display:flex; flex-direction:column; gap:2px; max-height:230px; overflow-y:auto; padding:2px; }
+  .col-check{
+    display:flex; align-items:center; gap:9px; padding:6px 4px; font-size:12.5px; color:var(--text);
+    border-radius:6px; cursor:pointer;
+  }
+  .col-check:hover{ background:var(--panel-2); }
+  .col-check input{ accent-color:var(--cyan); width:14px; height:14px; }
+  .col-check-actions{ display:flex; gap:8px; margin-top:8px; }
+  .col-check-actions button{
+    background:none; border:none; color:var(--muted); font-size:11px; text-decoration:underline; padding:0;
+  }
+  .col-check-actions button:hover{ color:var(--cyan); }
+
+  /* ---------- Download button ---------- */
+  .btn.download{ white-space:nowrap; }
+
+  /* ---------- Recidivism page ---------- */
+  .page-head{ margin-bottom:16px; }
+  .page-head h2{ font-family:'Space Grotesk',sans-serif; font-size:19px; margin:0 0 4px 0; }
+  .page-head p{ font-size:12.5px; color:var(--muted); margin:0; max-width:720px; line-height:1.5; }
+
+  .bars-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px; margin-bottom:18px;
+  }
+  .bars-panel h3{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin:0 0 12px 0; font-weight:700; }
+  .bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+  .bar-row .bar-label{ width:100px; flex-shrink:0; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted); text-align:right; }
+  .bar-row .bar-track{ flex:1; background:var(--panel-2); border-radius:4px; height:18px; position:relative; overflow:hidden; }
+  .bar-row .bar-fill{ position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg, var(--amber-dim), var(--amber)); border-radius:4px; }
+  .bar-row .bar-num{ width:36px; flex-shrink:0; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text); }
+
+  .recid-table-wrap{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:auto; margin-bottom:18px;
+  }
+  .recid-row{ cursor:pointer; }
+  .recid-row:hover td{ background:rgba(251,191,36,0.05); }
+  .recid-row.expanded td{ background:rgba(251,191,36,0.08); }
+  .detail-row td{ background:var(--panel-2); padding:0; }
+  .detail-inner{ padding:14px 20px; }
+  .detail-inner table{ width:100%; min-width:0; }
+  .detail-inner th{ position:static; background:none; color:var(--muted-2); }
+  .detail-inner td{ font-size:11.5px; }
+  .empty-recid{
+    text-align:center; color:var(--muted); padding:50px 20px; border:1px dashed var(--line);
+    border-radius:var(--radius); background:var(--panel-2);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-mark">ETO</div>
+        <div class="brand-text">
+          <h1>Painel de Ocorrências Relevantes</h1>
+          <p>Energisa Tocantins &middot; Crítica de Ocorrências</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <label class="btn primary" for="fileInput">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <span id="uploadLabel">Carregar .txt</span>
+        </label>
+        <input type="file" id="fileInput" class="file-input" accept=".txt,.csv">
+        <button class="btn" id="openConfigBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h6M4 12h12M4 18h8"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+          Critérios
+        </button>
+      </div>
+    </div>
+    <div class="pulse-wrap">
+      <svg viewBox="0 0 1000 14" preserveAspectRatio="none">
+        <path class="pulse-line" d="M0,7 L380,7 L410,1 L430,13 L450,7 L1000,7"/>
+      </svg>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tabPainel" data-view="dashboard">Painel</button>
+      <button class="nav-tab" id="tabRecid" data-view="viewRecid">Reincidências</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <div id="emptyState" class="empty-state">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+    <h2>Nenhum arquivo carregado</h2>
+    <p>Carregue o arquivo <b>Critica__072026.txt</b> (mesma fonte usada no Power Query) para gerar o painel. Todo o processamento acontece no seu navegador — nenhum dado é enviado a servidor algum.</p>
+    <label class="btn primary" for="fileInput">Selecionar arquivo</label>
+  </div>
+
+  <div id="dashboard" style="display:none;">
+
+    <div class="kpis">
+      <div class="kpi" style="--accent:var(--cyan)">
+        <div class="label">Ocorrências relevantes</div>
+        <div class="value" id="kpiTotal">0</div>
+        <div class="sub" id="kpiTotalSub">de 0 no arquivo</div>
+      </div>
+      <div class="kpi" style="--accent:var(--red)">
+        <div class="label">Clientes afetados</div>
+        <div class="value" id="kpiClientes">0</div>
+        <div class="sub">soma no recorte atual</div>
+      </div>
+      <div class="kpi" style="--accent:var(--amber)">
+        <div class="label">Duração total</div>
+        <div class="value" id="kpiDuracao">0h</div>
+        <div class="sub">tempo acumulado de interrupção</div>
+      </div>
+      <div class="kpi" style="--accent:var(--green)">
+        <div class="label">Contrib. IDEC ETO</div>
+        <div class="value" id="kpiIdec">0,000000</div>
+        <div class="sub">impacto no indicador de duração</div>
+      </div>
+      <div class="kpi" style="--accent:var(--purple)">
+        <div class="label">Contrib. IFEC ETO</div>
+        <div class="value" id="kpiIfec">0,000000</div>
+        <div class="sub">impacto no indicador de frequência</div>
+      </div>
+    </div>
+
+    <div class="day-panel">
+      <div class="day-panel-head">
+        <h3>Filtrar por dia <span class="badge-count" id="diaSelCount">0</span></h3>
+        <button id="clearDaysBtn">limpar seleção</button>
+      </div>
+      <div class="day-pills" id="dayPills"></div>
+    </div>
+
+    <div class="insights" id="insightsRow">
+      <div class="insight-card">
+        <div class="rank">1</div>
+        <div class="label">Causa principal</div>
+        <div class="cause-name" id="cause1Name">—</div>
+        <div class="cause-count" id="cause1Count">0<span>ocorrências</span></div>
+      </div>
+      <div class="insight-card">
+        <div class="rank">2</div>
+        <div class="label">2ª causa</div>
+        <div class="cause-name" id="cause2Name">—</div>
+        <div class="cause-count" id="cause2Count">0<span>ocorrências</span></div>
+      </div>
+      <div class="insight-card">
+        <div class="rank">3</div>
+        <div class="label">3ª causa</div>
+        <div class="cause-name" id="cause3Name">—</div>
+        <div class="cause-count" id="cause3Count">0<span>ocorrências</span></div>
+      </div>
+      <div class="insight-card recidivism">
+        <div class="label">Elementos interrompidos reincidentes (dia 1 até hoje)</div>
+        <div class="cause-count" id="recidCount">0<span id="recidSub">elementos</span></div>
+        <div class="recid-list" id="recidList"></div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="Buscar por causa, elemento, alimentador, observação...">
+      </div>
+      <div class="count-pill"><b id="rowCount">0</b>&nbsp;ocorrências exibidas</div>
+      <button class="btn download" id="downloadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+        Baixar Excel
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="dataTable">
+        <thead>
+          <tr id="tableHead"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="viewRecid" style="display:none;">
+    <div class="page-head">
+      <h2>Análise de reincidências</h2>
+      <p>Elementos <b>interrompidos</b> (chave, disjuntor, religador, transformador...) que se repetiram <span id="recidPageThreshold">5</span>+ vezes <span id="recidPagePeriodo">entre o dia 1 e o dia mais recente da base carregada</span>. Cada linha da base representa uma interrupção desse elemento. O corte é o mesmo definido em Critérios → Reincidência de elementos.</p>
+    </div>
+
+    <div class="day-panel">
+      <div class="day-panel-head">
+        <h3>Filtrar por dia <span class="badge-count" id="diaSelCountRecid">0</span></h3>
+        <button id="clearDaysBtnRecid">limpar seleção</button>
+      </div>
+      <div class="day-pills" id="dayPillsRecid"></div>
+    </div>
+
+    <div class="day-panel">
+      <div class="day-panel-head">
+        <h3>Filtrar por zona</h3>
+        <button id="resetZonaBtn">ver UB e RR</button>
+      </div>
+      <div class="day-pills" id="zonaPillsRecid"></div>
+    </div>
+
+    <div class="kpis" id="recidKpis">
+      <div class="kpi" style="--accent:var(--amber)">
+        <div class="label">Elementos reincidentes</div>
+        <div class="value" id="rkTotal">0</div>
+        <div class="sub" id="rkTotalSub">de 0 elementos distintos na base</div>
+      </div>
+      <div class="kpi" style="--accent:var(--red)">
+        <div class="label">Pior elemento</div>
+        <div class="value" id="rkTop" style="font-size:17px;">—</div>
+        <div class="sub" id="rkTopSub">ocorrências</div>
+      </div>
+      <div class="kpi" style="--accent:var(--cyan)">
+        <div class="label">Clientes afetados (reincidentes)</div>
+        <div class="value" id="rkClientes">0</div>
+        <div class="sub">soma de todas as ocorrências desses elementos</div>
+      </div>
+      <div class="kpi" style="--accent:var(--purple)">
+        <div class="label">Duração total (reincidentes)</div>
+        <div class="value" id="rkDuracao">0h</div>
+        <div class="sub">tempo acumulado nesses elementos</div>
+      </div>
+    </div>
+
+    <div class="bars-panel">
+      <h3>Top 15 elementos por nº de ocorrências</h3>
+      <div id="barsContainer"></div>
+    </div>
+
+    <div class="toolbar">
+      <div style="flex:1; font-size:12px; color:var(--muted);">Elementos reincidentes no recorte atual</div>
+      <button class="btn download" id="downloadElementPatternBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+        Baixar Excel (padrão Elemento/UCs/Reinc. 7D)
+      </button>
+      <button class="btn download" id="downloadRecidBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+        Baixar Excel (reincidências)
+      </button>
+    </div>
+
+    <div class="recid-table-wrap">
+      <table id="recidTable">
+        <thead>
+          <tr id="recidTableHead"></tr>
+        </thead>
+        <tbody id="recidTableBody"></tbody>
+      </table>
+    </div>
+
+    <div id="recidEmpty" class="empty-recid" style="display:none;">
+      Nenhum elemento atingiu o corte de reincidência atual. Reduza o valor em Critérios → Reincidência de elementos.
+    </div>
+  </div>
+</div>
+
+<footer>Processamento 100% local no navegador &middot; nenhum dado sai da sua máquina</footer>
+
+<!-- ============ Config Drawer ============ -->
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <h2>Critérios de relevância</h2>
+      <p>Ajuste e o painel recalcula na hora</p>
+    </div>
+    <button class="drawer-close" id="closeConfigBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body">
+
+    <div class="cfg-section">
+      <h3>Modo de critério</h3>
+      <div class="radio-group" id="modeGroup">
+        <div class="radio-opt active" data-mode="OR">Qualquer um (OR)</div>
+        <div class="radio-opt" data-mode="AND">Todos (AND)</div>
+      </div>
+      <div class="cfg-row hint" style="margin-top:8px;">"Qualquer um" marca como relevante se pelo menos 1 dos 3 cortes abaixo for atingido. "Todos" exige os 3 ao mesmo tempo (bem mais restritivo).</div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Cortes de relevância</h3>
+      <div class="cfg-row">
+        <label>Corte IDEC ETO (contribuição mínima)</label>
+        <input type="number" id="cutIdec" step="0.00001" value="0.00046">
+        <div class="hint">Top ~10% de contribuição ao indicador DEC do ETO na base original.</div>
+      </div>
+      <div class="cfg-row">
+        <label>Corte IFEC ETO (contribuição mínima)</label>
+        <input type="number" id="cutIfec" step="0.00001" value="0.00026">
+        <div class="hint">Top ~10% de contribuição ao indicador FEC do ETO na base original.</div>
+      </div>
+      <div class="cfg-row">
+        <label>Duração extrema mínima (minutos)</label>
+        <input type="number" id="cutDur" step="10" value="1340">
+        <div class="hint">Outlier de restabelecimento longo (~22h), mesmo com baixo impacto em clientes.</div>
+      </div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Regras gerais</h3>
+      <div class="toggle-row">
+        <span>Excluir dia crítico (STA_CALC_IND_HDE = "C")</span>
+        <label class="switch"><input type="checkbox" id="excludeCritical" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span>Aplicar critério de relevância</span>
+        <label class="switch"><input type="checkbox" id="applyRelevance" checked><span class="slider"></span></label>
+      </div>
+      <div class="cfg-row hint">Desligue "Aplicar critério" para navegar por todas as ocorrências (após exclusão do dia crítico) e usar só os filtros manuais abaixo.</div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Reincidência de elementos</h3>
+      <div class="cfg-row">
+        <label>Ocorrências mínimas para considerar reincidente</label>
+        <input type="number" id="cutRecid" step="1" value="2">
+        <div class="hint">Conta elementos interrompidos (ex: religador, disjuntor, chave) que voltaram a ser interrompidos esse nº de vezes ou mais no período. Linhas com o mesmo número de ocorrência (mesmo evento, várias localidades atingidas) contam como uma só interrupção — não geram reincidência entre si.</div>
+      </div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Filtros manuais adicionais</h3>
+      <div class="cfg-row-inline">
+        <div class="cfg-row">
+          <label>Clientes ≥</label>
+          <input type="number" id="minClientes" placeholder="0">
+        </div>
+        <div class="cfg-row">
+          <label>Duração ≥ (min)</label>
+          <input type="number" id="minDuracao" placeholder="0">
+        </div>
+      </div>
+      <div class="cfg-row-inline">
+        <div class="cfg-row">
+          <label>Dia (de)</label>
+          <input type="number" id="diaMin" placeholder="1">
+        </div>
+        <div class="cfg-row">
+          <label>Dia (até)</label>
+          <input type="number" id="diaMax" placeholder="31">
+        </div>
+      </div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Regional <span class="badge-count" id="regionalCount">0</span></h3>
+      <div class="chip-list" id="regionalChips"></div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Polo <span class="badge-count" id="poloCount">0</span></h3>
+      <div class="chip-list" id="poloChips"></div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Causa <span class="badge-count" id="causaCount">0</span></h3>
+      <div class="chip-list" id="causaChips"></div>
+    </div>
+
+    <div class="cfg-section">
+      <h3>Colunas exibidas na tabela</h3>
+      <div class="col-check-list" id="colCheckList"></div>
+      <div class="col-check-actions">
+        <button id="colAllBtn">marcar todas</button>
+        <button id="colNoneBtn">desmarcar todas</button>
+      </div>
+    </div>
+
+  </div>
+  <div class="drawer-foot">
+    <button class="btn" id="resetBtn">Restaurar padrão</button>
+    <button class="btn primary" id="applyBtn">Aplicar</button>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const state = {
+    rows: [],           // todas as linhas parseadas (objetos tipados)
+    totalRaw: 0,
+    filtered: [],
+    sortKey: 'Dia',
+    sortDir: 'desc',
+    selected: { regional: new Set(), polo: new Set(), causa: new Set(), dias: new Set(), diasRecid: new Set(), zonaRecid: new Set(['UB','RR']) }
+  };
+
+  const cfg = {
+    mode: 'OR',
+    cutIdec: 0.00046,
+    cutIfec: 0.00026,
+    cutDur: 1340,
+    excludeCritical: true,
+    applyRelevance: true,
+    minClientes: null,
+    minDuracao: null,
+    diaMin: null,
+    diaMax: null,
+    cutRecid: 2,
+    visibleCols: {} // preenchido logo abaixo com base em COLS, todas true por padrão
+  };
+
+  // ---------- Parsing helpers ----------
+  function parseNum(v){
+    if(v === undefined || v === null) return 0;
+    v = String(v).trim();
+    if(v === '') return 0;
+    v = v.replace(/\./g,'').indexOf(',') > -1 ? v.replace(/\./g,'').replace(',','.') : v.replace(',','.');
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
+  function parseNumSimple(v){
+    // para campos que já vêm com ponto decimal ou são inteiros
+    if(v === undefined || v === null) return 0;
+    v = String(v).trim().replace(',', '.');
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
+  function parseBRDateTime(v){
+    if(!v) return null;
+    v = v.trim();
+    // formatos aceitos: dd/mm/yyyy hh:mm:ss | dd/mm/yyyy hh:mm | yyyy-mm-dd hh:mm:ss
+    let m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if(m){
+      return { day:+m[1], month:+m[2], year:+m[3], hour:+m[4], minute:+m[5] };
+    }
+    m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if(m){
+      return { day:+m[3], month:+m[2], year:+m[1], hour:+m[4], minute:+m[5] };
+    }
+    return null;
+  }
+
+  function detectDelimiter(headerLine){
+    const counts = { ';': (headerLine.match(/;/g)||[]).length, ',': (headerLine.match(/,/g)||[]).length, '\t': (headerLine.match(/\t/g)||[]).length };
+    return Object.keys(counts).reduce((a,b)=> counts[a] >= counts[b] ? a : b);
+  }
+
+  function parseFile(text){
+    const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
+    if(lines.length < 2){ throw new Error('Arquivo vazio ou sem dados.'); }
+    const delim = detectDelimiter(lines[0]);
+    const header = lines[0].split(delim).map(h => h.replace(/^\uFEFF/,'').trim());
+    const idx = {};
+    header.forEach((h,i) => idx[h] = i);
+
+    const need = ['DTA_ABERT','DURACAO','QTD_CONS_INTER_FAT','DES_CAUSA_INTER_CAU','DES_SUB_CAUSA_INTER_SCR',
+                  'ABRANGÊNCIA','COD_ELE_PROBLEMA','COD_ELE_INTERROMPIDO','DES_ALIMENTADOR','REGIONAL','LOCALIDADE','POLO',
+                  'DES_CONJ_CJU','OBSERVACAO','STA_CALC_IND_HDE','QTD_IDEC_ETO','QTD_IFEC_ETO','COD_TIPO_LOC_ELE'];
+    const missing = need.filter(n => !(n in idx));
+    if(missing.length){
+      console.warn('Colunas não encontradas (seguindo mesmo assim):', missing);
+    }
+
+    const rows = [];
+    for(let li=1; li<lines.length; li++){
+      const parts = lines[li].split(delim);
+      if(parts.length < 5) continue;
+      const get = (name) => idx[name] !== undefined ? parts[idx[name]] : '';
+
+      const dt = parseBRDateTime(get('DTA_ABERT'));
+      const duracao = Math.round(parseNumSimple(get('DURACAO')));
+      const clientes = Math.round(parseNumSimple(get('QTD_CONS_INTER_FAT')));
+      const idec = parseNum(get('QTD_IDEC_ETO'));
+      const ifec = parseNum(get('QTD_IFEC_ETO'));
+      const causa = (get('DES_CAUSA_INTER_CAU')||'').trim();
+      const subcausa = (get('DES_SUB_CAUSA_INTER_SCR')||'').trim();
+      const abrangencia = (get('ABRANGÊNCIA')||'').trim();
+      const elemento = (get('COD_ELE_PROBLEMA')||'').trim();
+      const elementoInterrompido = (get('COD_ELE_INTERROMPIDO')||'').trim();
+      const alimentador = (get('DES_ALIMENTADOR')||'').trim();
+      const regional = (get('REGIONAL')||'').trim();
+      const localidade = (get('LOCALIDADE')||'').trim();
+      const polo = (get('POLO')||'').trim();
+      const conjunto = (get('DES_CONJ_CJU')||'').trim();
+      const obs = (get('OBSERVACAO')||'').trim();
+      const staCalc = (get('STA_CALC_IND_HDE')||'').trim();
+      const ocorrenciaNum = (get('NUM_SEQ_OPER_INIC_HDE')||'').trim();
+      const zona = (get('COD_TIPO_LOC_ELE')||'').trim();
+
+      rows.push({
+        OcorrenciaNum: ocorrenciaNum,
+        Ano: dt ? dt.year : null,
+        Dia: dt ? dt.day : null,
+        Mes: dt ? dt.month : null,
+        Hora: dt ? (String(dt.hour).padStart(2,'0') + ':' + String(dt.minute).padStart(2,'0')) : '',
+        Duracao: duracao,
+        Clientes: clientes,
+        IdecEto: idec,
+        IfecEto: ifec,
+        CausaSubcausa: causa + (subcausa ? (' – ' + subcausa) : ''),
+        CausaPrincipal: causa,
+        Subcausa: subcausa,
+        ElementoCod: elemento,
+        ElementoInterrompido: elementoInterrompido,
+        Zona: zona,
+        ElementoAlimentador: [abrangencia, elemento].filter(Boolean).join(' ') + (alimentador ? (' / ' + alimentador) : '') + (regional ? (' (' + regional + ')') : ''),
+        Localidade: localidade,
+        Polo: polo,
+        Regional: regional,
+        Conjunto: conjunto,
+        Observacao: obs,
+        StaCalc: staCalc
+      });
+    }
+    return rows;
+  }
+
+  // ---------- Filtering ----------
+  function computeFiltered(){
+    let rows = state.rows;
+
+    if(cfg.excludeCritical){
+      rows = rows.filter(r => r.StaCalc !== 'C');
+    }
+    const totalAfterCritical = rows.length;
+
+    if(cfg.applyRelevance){
+      rows = rows.filter(r => {
+        const hitIdec = r.IdecEto >= cfg.cutIdec;
+        const hitIfec = r.IfecEto >= cfg.cutIfec;
+        const hitDur  = r.Duracao >= cfg.cutDur;
+        if(cfg.mode === 'OR') return hitIdec || hitIfec || hitDur;
+        return hitIdec && hitIfec && hitDur;
+      });
+    }
+
+    if(cfg.minClientes !== null && !isNaN(cfg.minClientes)) rows = rows.filter(r => r.Clientes >= cfg.minClientes);
+    if(cfg.minDuracao !== null && !isNaN(cfg.minDuracao)) rows = rows.filter(r => r.Duracao >= cfg.minDuracao);
+    if(cfg.diaMin !== null && !isNaN(cfg.diaMin)) rows = rows.filter(r => r.Dia !== null && r.Dia >= cfg.diaMin);
+    if(cfg.diaMax !== null && !isNaN(cfg.diaMax)) rows = rows.filter(r => r.Dia !== null && r.Dia <= cfg.diaMax);
+
+    if(state.selected.regional.size) rows = rows.filter(r => state.selected.regional.has(r.Regional));
+    if(state.selected.polo.size) rows = rows.filter(r => state.selected.polo.has(r.Polo));
+    if(state.selected.causa.size) rows = rows.filter(r => state.selected.causa.has(r.CausaPrincipal));
+    if(state.selected.dias.size) rows = rows.filter(r => r.Dia !== null && state.selected.dias.has(r.Dia));
+
+    const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+    if(term){
+      rows = rows.filter(r =>
+        r.CausaSubcausa.toLowerCase().includes(term) ||
+        r.ElementoAlimentador.toLowerCase().includes(term) ||
+        r.Observacao.toLowerCase().includes(term) ||
+        r.Localidade.toLowerCase().includes(term) ||
+        r.Conjunto.toLowerCase().includes(term)
+      );
+    }
+
+    // sort
+    const key = state.sortKey, dir = state.sortDir === 'asc' ? 1 : -1;
+    rows = rows.slice().sort((a,b) => {
+      let av = a[key], bv = b[key];
+      if(typeof av === 'string') av = av.toLowerCase();
+      if(typeof bv === 'string') bv = bv.toLowerCase();
+      if(av === null || av === undefined) av = '';
+      if(bv === null || bv === undefined) bv = '';
+      if(av < bv) return -1*dir;
+      if(av > bv) return 1*dir;
+      return 0;
+    });
+
+    state.filtered = rows;
+    state.totalAfterCritical = totalAfterCritical;
+  }
+
+  // ---------- Rendering ----------
+  const COLS = [
+    {key:'Dia', label:'Dia', type:'num', width:50},
+    {key:'Mes', label:'Mês', type:'num', width:50},
+    {key:'Hora', label:'Hora', type:'mono', width:60},
+    {key:'Duracao', label:'Duração (min)', type:'num', width:90},
+    {key:'Clientes', label:'Clientes', type:'num', width:90},
+    {key:'IdecEto', label:'IDEC ETO', type:'dec', width:100},
+    {key:'IfecEto', label:'IFEC ETO', type:'dec', width:100},
+    {key:'CausaSubcausa', label:'Causa / Subcausa', type:'text', width:260},
+    {key:'ElementoAlimentador', label:'Elemento / Alimentador', type:'text', width:240},
+    {key:'Localidade', label:'Localidade', type:'text', width:150},
+    {key:'Polo', label:'Polo', type:'text', width:110},
+    {key:'Regional', label:'Regional', type:'text', width:100},
+    {key:'Conjunto', label:'Conjunto', type:'text', width:140},
+    {key:'Observacao', label:'Observação', type:'obs', width:340},
+  ];
+  COLS.forEach(c => { cfg.visibleCols[c.key] = true; });
+  function getVisibleCols(){ return COLS.filter(c => cfg.visibleCols[c.key]); }
+
+  function fmtDec(v, casas){
+    casas = casas === undefined ? 6 : casas;
+    return (v || 0).toFixed(casas).replace('.', ',');
+  }
+  function fmtInt(v){ return v.toLocaleString('pt-BR'); }
+  function escapeHtml(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderHead(){
+    const tr = document.getElementById('tableHead');
+    tr.innerHTML = '';
+    getVisibleCols().forEach(c => {
+      const th = document.createElement('th');
+      let arrow = '';
+      if(state.sortKey === c.key) arrow = state.sortDir === 'asc' ? ' ▲' : ' ▼';
+      th.innerHTML = c.label + (arrow ? '<span class="arrow">'+arrow+'</span>' : '');
+      th.addEventListener('click', () => {
+        if(state.sortKey === c.key){ state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; }
+        else { state.sortKey = c.key; state.sortDir = 'desc'; }
+        refresh();
+      });
+      tr.appendChild(th);
+    });
+  }
+
+  function maxOf(arr, key){ return arr.reduce((m,r)=> Math.max(m, r[key]||0), 0) || 1; }
+
+  function renderBody(){
+    const tbody = document.getElementById('tableBody');
+    const rows = state.filtered;
+    const maxDur = maxOf(rows, 'Duracao');
+    const maxCli = maxOf(rows, 'Clientes');
+    const frag = document.createDocumentFragment();
+
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      getVisibleCols().forEach(c => {
+        const td = document.createElement('td');
+        const val = r[c.key];
+        if(c.type === 'num'){
+          td.className = 'num';
+          td.textContent = (typeof val === 'number') ? fmtInt(val) : (val ?? '');
+          if(c.key === 'Duracao'){
+            td.classList.add('bar-cell');
+            const pct = Math.min(100, (val / maxDur) * 100);
+            const bar = document.createElement('div');
+            bar.className = 'bar-bg';
+            bar.style.width = pct + '%';
+            td.appendChild(bar);
+            const span = document.createElement('span');
+            span.className = 'bar-val';
+            span.textContent = fmtInt(val);
+            td.textContent = '';
+            td.appendChild(bar);
+            td.appendChild(span);
+          }
+        } else if(c.type === 'dec'){
+          td.className = 'num mono';
+          td.textContent = fmtDec(val, 6);
+        } else if(c.type === 'mono'){
+          td.className = 'mono';
+          td.textContent = val || '';
+        } else if(c.type === 'obs'){
+          td.className = 'obs';
+          td.textContent = val || '';
+          td.title = val || '';
+        } else {
+          td.textContent = val || '';
+        }
+        tr.appendChild(td);
+      });
+      frag.appendChild(tr);
+    });
+    tbody.innerHTML = '';
+    tbody.appendChild(frag);
+  }
+
+  function renderKPIs(){
+    const rows = state.filtered;
+    const totalClientes = rows.reduce((s,r)=>s+r.Clientes,0);
+    const totalDurH = rows.reduce((s,r)=>s+r.Duracao,0)/60;
+    const totalIdec = rows.reduce((s,r)=>s+r.IdecEto,0);
+    const totalIfec = rows.reduce((s,r)=>s+r.IfecEto,0);
+
+    document.getElementById('kpiTotal').textContent = fmtInt(rows.length);
+    document.getElementById('kpiTotalSub').textContent = 'de ' + fmtInt(state.totalAfterCritical) + ' (após excluir dia crítico)';
+    document.getElementById('kpiClientes').textContent = fmtInt(totalClientes);
+    document.getElementById('kpiDuracao').textContent = totalDurH.toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'h';
+    document.getElementById('kpiIdec').textContent = fmtDec(totalIdec, 6);
+    document.getElementById('kpiIfec').textContent = fmtDec(totalIfec, 6);
+    document.getElementById('rowCount').textContent = fmtInt(rows.length);
+  }
+
+  function extractEquipe(obs){
+    if(!obs) return '';
+    const m = obs.match(/(\d{2,4})\s*-?\s*op\s*(\d{1,3})/i);
+    if(!m) return '';
+    return m[1] + 'OP' + m[2].padStart(2,'0');
+  }
+
+  function mergeOccurrenceGroup(rs){
+    // rs = todas as linhas que compartilham o mesmo NUM_SEQ_OPER_INIC_HDE (mesmo Dia/Hora/evento),
+    // normalmente uma por localidade atingida dentro do mesmo desarme/manobra.
+    const first = rs[0];
+    return {
+      OcorrenciaNum: first.OcorrenciaNum,
+      Ano: first.Ano,
+      Dia: first.Dia,
+      Mes: first.Mes,
+      Hora: first.Hora,
+      Duracao: Math.max(...rs.map(r=>r.Duracao)),          // mesmo evento: duração = a maior registrada entre as linhas
+      Clientes: rs.reduce((s,r)=>s+r.Clientes,0),           // localidades diferentes: clientes somam (impacto real do evento)
+      CausaSubcausa: first.CausaSubcausa,
+      CausaPrincipal: first.CausaPrincipal,
+      Subcausa: first.Subcausa,
+      Observacao: first.Observacao,
+      Equipe: extractEquipe(first.Observacao),
+      Localidade: first.Localidade,
+      Polo: first.Polo,
+      IdecEto: rs.reduce((s,r)=>s+r.IdecEto,0),
+      IfecEto: rs.reduce((s,r)=>s+r.IfecEto,0),
+      Localidades: Array.from(new Set(rs.map(r=>r.Localidade).filter(Boolean))),
+      Zonas: Array.from(new Set(rs.map(r=>r.Zona).filter(Boolean))),
+      _subRowCount: rs.length
+    };
+  }
+
+  function dedupeOccurrences(rs){
+    // Agrupa linhas do mesmo elemento por número de ocorrência real; sem esse número,
+    // cada linha é tratada como uma ocorrência própria (não junta por engano).
+    const sorted = rs.slice().sort((a,b) => (a.Dia-b.Dia) || a.Hora.localeCompare(b.Hora));
+    const groups = new Map();
+    const order = [];
+    sorted.forEach((r, idx) => {
+      const key = r.OcorrenciaNum ? ('NUM:'+r.OcorrenciaNum) : ('ROW:'+idx);
+      if(!groups.has(key)){ groups.set(key, []); order.push(key); }
+      groups.get(key).push(r);
+    });
+    return order.map(key => mergeOccurrenceGroup(groups.get(key)));
+  }
+
+  function computeRecidivismData(){
+    // Independente dos filtros de dia/causa/regional/polo/busca do Painel: considera o período
+    // selecionado nesta própria página (ou o período inteiro, se nenhum dia estiver marcado aqui),
+    // respeitando apenas a exclusão de dia crítico.
+    let base = state.rows;
+    if(cfg.excludeCritical) base = base.filter(r => r.StaCalc !== 'C');
+    if(state.selected.diasRecid.size) base = base.filter(r => r.Dia !== null && state.selected.diasRecid.has(r.Dia));
+    // Zona: se ambas (ou nenhuma) estiverem marcadas, não filtra; se só uma, restringe a ela.
+    if(state.selected.zonaRecid.size === 1){
+      const zonaAlvo = Array.from(state.selected.zonaRecid)[0];
+      base = base.filter(r => r.Zona === zonaAlvo);
+    }
+
+    const byElement = {};
+    base.forEach(r => {
+      if(!r.ElementoInterrompido) return;
+      if(!byElement[r.ElementoInterrompido]) byElement[r.ElementoInterrompido] = [];
+      byElement[r.ElementoInterrompido].push(r);
+    });
+
+    const diaMinBase = base.reduce((m,r)=> r.Dia!==null ? Math.min(m,r.Dia) : m, Infinity);
+    const diaMaxBase = base.reduce((m,r)=> r.Dia!==null ? Math.max(m,r.Dia) : m, -Infinity);
+
+    const elementos = Object.entries(byElement).map(([cod, rawRows]) => {
+      const rs = dedupeOccurrences(rawRows); // uma entrada por ocorrência real, não por linha
+      const causaCounts = {};
+      rs.forEach(r => { causaCounts[r.CausaPrincipal||'—'] = (causaCounts[r.CausaPrincipal||'—']||0)+1; });
+      const causaTop = Object.entries(causaCounts).sort((a,b)=>b[1]-a[1])[0];
+      return {
+        cod,
+        count: rs.length,
+        rows: rs,
+        diaMin: Math.min(...rs.map(r=>r.Dia).filter(d=>d!==null)),
+        diaMax: Math.max(...rs.map(r=>r.Dia).filter(d=>d!==null)),
+        regionais: Array.from(new Set(rawRows.map(r=>r.Regional).filter(Boolean))),
+        polos: Array.from(new Set(rawRows.map(r=>r.Polo).filter(Boolean))),
+        zonas: Array.from(new Set(rawRows.map(r=>r.Zona).filter(Boolean))),
+        causaPrincipal: causaTop ? causaTop[0] : '—',
+        duracaoTotal: rs.reduce((s,r)=>s+r.Duracao,0),
+        clientesTotal: rs.reduce((s,r)=>s+r.Clientes,0),
+        idecTotal: rs.reduce((s,r)=>s+r.IdecEto,0),
+        ifecTotal: rs.reduce((s,r)=>s+r.IfecEto,0),
+      };
+    });
+
+    const recorrentes = elementos.filter(e => e.count >= cfg.cutRecid).sort((a,b) => b.count - a.count);
+
+    return { base, totalDistinctElements: elementos.length, elementos, recorrentes, diaMinBase, diaMaxBase };
+  }
+
+  function renderTopCauses(){
+    const rows = state.filtered;
+    const counts = {};
+    rows.forEach(r => {
+      const c = r.CausaPrincipal || '(sem causa)';
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    const ranked = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,3);
+    for(let i=0; i<3; i++){
+      const nameEl = document.getElementById('cause'+(i+1)+'Name');
+      const countEl = document.getElementById('cause'+(i+1)+'Count');
+      if(ranked[i]){
+        nameEl.textContent = ranked[i][0];
+        countEl.innerHTML = fmtInt(ranked[i][1]) + '<span>ocorrências</span>';
+      } else {
+        nameEl.textContent = '—';
+        countEl.innerHTML = '0<span>ocorrências</span>';
+      }
+    }
+  }
+
+  function renderRecidivism(){
+    const data = computeRecidivismData();
+    document.getElementById('recidCount').innerHTML = fmtInt(data.recorrentes.length) +
+      '<span id="recidSub"> elementos com ≥ '+cfg.cutRecid+' ocorrências</span>';
+
+    const listEl = document.getElementById('recidList');
+    if(data.recorrentes.length === 0){
+      listEl.textContent = 'Nenhum elemento atingiu o corte de reincidência no período.';
+    } else {
+      const top = data.recorrentes.slice(0,3).map(e => '<b>'+e.cod+'</b> — '+e.count+'x').join(' &middot; ');
+      const periodo = (isFinite(data.diaMinBase) && isFinite(data.diaMaxBase)) ? ('dia '+data.diaMinBase+' ao dia '+data.diaMaxBase) : 'período carregado';
+      listEl.innerHTML = 'Top: ' + top + '<br>Período avaliado: ' + periodo + '.';
+    }
+  }
+
+  // ---------- Página de Reincidências (análise aprofundada) ----------
+  const RECID_COLS = [
+    {key:'cod', label:'Elemento interrompido', type:'mono'},
+    {key:'count', label:'Ocorrências', type:'num'},
+    {key:'diaMin', label:'1ª ocorr. (dia)', type:'num'},
+    {key:'diaMax', label:'Última ocorr. (dia)', type:'num'},
+    {key:'causaPrincipal', label:'Causa mais frequente', type:'text'},
+    {key:'zonas', label:'Zona', type:'list'},
+    {key:'regionais', label:'Regional(is)', type:'list'},
+    {key:'polos', label:'Polo(s)', type:'list'},
+    {key:'duracaoTotal', label:'Duração total (min)', type:'num'},
+    {key:'clientesTotal', label:'Clientes total', type:'num'},
+    {key:'idecTotal', label:'IDEC ETO total', type:'dec'},
+    {key:'ifecTotal', label:'IFEC ETO total', type:'dec'},
+  ];
+  let recidSortKey = 'count', recidSortDir = 'desc';
+  let recidExpanded = null; // cod do elemento expandido no momento
+
+  function renderRecidivismPage(){
+    const data = computeRecidivismData();
+    document.getElementById('recidPageThreshold').textContent = cfg.cutRecid;
+
+    const periodoEl = document.getElementById('recidPagePeriodo');
+    if(state.selected.diasRecid.size){
+      const dias = Array.from(state.selected.diasRecid).sort((a,b)=>a-b);
+      periodoEl.textContent = 'no período filtrado (dia' + (dias.length>1?'s ':' ') + dias.map(d=>String(d).padStart(2,'0')).join(', ');
+    } else if(isFinite(data.diaMinBase) && isFinite(data.diaMaxBase)){
+      periodoEl.textContent = 'entre o dia ' + data.diaMinBase + ' e o dia ' + data.diaMaxBase + ' da base carregada';
+    } else {
+      periodoEl.textContent = 'na base carregada';
+    }
+
+    document.getElementById('rkTotal').textContent = fmtInt(data.recorrentes.length);
+    document.getElementById('rkTotalSub').textContent = 'de ' + fmtInt(data.totalDistinctElements) + ' elementos distintos no período selecionado';
+
+    if(data.recorrentes.length){
+      const pior = data.recorrentes[0];
+      document.getElementById('rkTop').textContent = pior.cod;
+      document.getElementById('rkTopSub').textContent = fmtInt(pior.count) + ' ocorrências';
+    } else {
+      document.getElementById('rkTop').textContent = '—';
+      document.getElementById('rkTopSub').textContent = 'ocorrências';
+    }
+
+    const totalClientes = data.recorrentes.reduce((s,e)=>s+e.clientesTotal,0);
+    const totalDurH = data.recorrentes.reduce((s,e)=>s+e.duracaoTotal,0)/60;
+    document.getElementById('rkClientes').textContent = fmtInt(totalClientes);
+    document.getElementById('rkDuracao').textContent = totalDurH.toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'h';
+
+    const barsEl = document.getElementById('barsContainer');
+    barsEl.innerHTML = '';
+    const top15 = data.recorrentes.slice(0,15);
+    const maxCount = top15.length ? top15[0].count : 1;
+    top15.forEach(e => {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      const pct = Math.max(4, (e.count/maxCount)*100);
+      row.innerHTML = '<div class="bar-label">'+e.cod+'</div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div>'+
+        '<div class="bar-num">'+e.count+'</div>';
+      barsEl.appendChild(row);
+    });
+
+    const theadRow = document.getElementById('recidTableHead');
+    theadRow.innerHTML = '';
+    RECID_COLS.forEach(c => {
+      const th = document.createElement('th');
+      let arrow = '';
+      if(recidSortKey === c.key) arrow = recidSortDir === 'asc' ? ' ▲' : ' ▼';
+      th.innerHTML = c.label + (arrow ? '<span class="arrow">'+arrow+'</span>' : '');
+      th.addEventListener('click', () => {
+        if(recidSortKey === c.key){ recidSortDir = recidSortDir === 'asc' ? 'desc' : 'asc'; }
+        else { recidSortKey = c.key; recidSortDir = 'desc'; }
+        renderRecidivismPage();
+      });
+      theadRow.appendChild(th);
+    });
+
+    const sorted = data.recorrentes.slice().sort((a,b) => {
+      let av = a[recidSortKey], bv = b[recidSortKey];
+      if(Array.isArray(av)) av = av.join(',');
+      if(Array.isArray(bv)) bv = bv.join(',');
+      if(typeof av === 'string') av = av.toLowerCase();
+      if(typeof bv === 'string') bv = bv.toLowerCase();
+      const dir = recidSortDir === 'asc' ? 1 : -1;
+      if(av < bv) return -1*dir;
+      if(av > bv) return 1*dir;
+      return 0;
+    });
+
+    const tbody = document.getElementById('recidTableBody');
+    tbody.innerHTML = '';
+    document.getElementById('recidEmpty').style.display = sorted.length ? 'none' : 'block';
+
+    sorted.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.className = 'recid-row' + (recidExpanded === e.cod ? ' expanded' : '');
+      RECID_COLS.forEach(c => {
+        const td = document.createElement('td');
+        const val = e[c.key];
+        if(c.type === 'num'){ td.className = 'num'; td.textContent = fmtInt(val); }
+        else if(c.type === 'dec'){ td.className = 'num mono'; td.textContent = fmtDec(val, 6); }
+        else if(c.type === 'mono'){ td.className = 'mono'; td.textContent = val; }
+        else if(c.type === 'list'){ td.textContent = val.join(', ') || '—'; }
+        else { td.textContent = val || '—'; }
+        tr.appendChild(td);
+      });
+      tr.addEventListener('click', () => {
+        recidExpanded = (recidExpanded === e.cod) ? null : e.cod;
+        renderRecidivismPage();
+      });
+      tbody.appendChild(tr);
+
+      if(recidExpanded === e.cod){
+        const dtr = document.createElement('tr');
+        dtr.className = 'detail-row';
+        const dtd = document.createElement('td');
+        dtd.colSpan = RECID_COLS.length;
+        const inner = document.createElement('div');
+        inner.className = 'detail-inner';
+        const dt = document.createElement('table');
+        dt.innerHTML = '<thead><tr><th>Tipo</th><th>Nº Ocorrência</th><th>Dia</th><th>Zona</th><th>Intervalo desde a origem (dias)</th><th>Duração (min)</th><th>Causa/Subcausa</th><th>Clientes</th><th>Observação</th></tr></thead>';
+        const dtbody = document.createElement('tbody');
+        const origemDia = e.rows.length ? e.rows[0].Dia : null;
+        e.rows.forEach((r, idx) => {
+          const rtr = document.createElement('tr');
+          const obsFull = r.Observacao || '';
+          const obsResumo = obsFull.length > 90 ? (obsFull.slice(0,90) + '…') : obsFull;
+          const locInfo = (r.Localidades && r.Localidades.length > 1) ? ('\n\nLocalidades atingidas neste evento: ' + r.Localidades.join(', ')) : '';
+          const obsTooltip = obsFull + locInfo;
+          const isOrigem = (idx === 0);
+          const tipoTag = isOrigem
+            ? '<span class="tag origem">ORIGEM</span>'
+            : '<span class="tag reinc">REINCIDÊNCIA '+idx+'</span>';
+          const intervalo = (!isOrigem && r.Dia !== null && origemDia !== null) ? (r.Dia - origemDia) : '—';
+          rtr.innerHTML = '<td class="tag-cell">'+tipoTag+'</td>'+
+            '<td class="mono">'+escapeHtml(r.OcorrenciaNum || '—')+'</td>'+
+            '<td class="num">'+r.Dia+'</td>'+
+            '<td class="mono">'+escapeHtml((r.Zonas||[]).join('/') || '—')+'</td>'+
+            '<td class="num">'+intervalo+'</td>'+
+            '<td class="num">'+fmtInt(r.Duracao)+'</td>'+
+            '<td>'+escapeHtml(r.CausaSubcausa||'')+'</td>'+
+            '<td class="num">'+fmtInt(r.Clientes)+'</td>'+
+            '<td class="obs" title="'+escapeHtml(obsTooltip)+'">'+escapeHtml(obsResumo)+(r._subRowCount>1?' <span class="tag reinc" style="background:rgba(34,211,238,0.12);color:var(--cyan);">'+r._subRowCount+' localidades</span>':'')+'</td>';
+          dtbody.appendChild(rtr);
+        });
+        dt.appendChild(dtbody);
+        inner.appendChild(dt);
+        dtd.appendChild(inner);
+        dtr.appendChild(dtd);
+        tbody.appendChild(dtr);
+      }
+    });
+
+    updateDayPillsActiveStateRecid();
+    updateZonaPillsActiveState();
+  }
+
+  function refresh(){
+    computeFiltered();
+    renderHead();
+    renderBody();
+    renderKPIs();
+    renderTopCauses();
+    renderRecidivism();
+    renderRecidivismPage();
+    updateDayPillsActiveState();
+  }
+
+  // ---------- Chip lists (Regional / Polo / Causa) ----------
+  function uniqueSorted(rows, key){
+    const s = new Set();
+    rows.forEach(r => { if(r[key]) s.add(r[key]); });
+    return Array.from(s).sort();
+  }
+
+  function buildChips(containerId, values, selectedSet, countId){
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    values.forEach(v => {
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (selectedSet.has(v) ? ' active' : '');
+      chip.textContent = v;
+      chip.addEventListener('click', () => {
+        if(selectedSet.has(v)) selectedSet.delete(v); else selectedSet.add(v);
+        chip.classList.toggle('active');
+        document.getElementById(countId).textContent = selectedSet.size;
+      });
+      el.appendChild(chip);
+    });
+    document.getElementById(countId).textContent = selectedSet.size;
+  }
+
+  function populateFilterLists(){
+    buildChips('regionalChips', uniqueSorted(state.rows,'Regional'), state.selected.regional, 'regionalCount');
+    buildChips('poloChips', uniqueSorted(state.rows,'Polo'), state.selected.polo, 'poloCount');
+    const causas = uniqueSorted(state.rows.map(r=>({Causa:r.CausaPrincipal})),'Causa');
+    buildChips('causaChips', causas, state.selected.causa, 'causaCount');
+  }
+
+  // ---------- Day pills (multi-seleção de dias na página principal) ----------
+  function renderDayPills(){
+    const dias = Array.from(new Set(state.rows.map(r => r.Dia).filter(d => d !== null))).sort((a,b)=>a-b);
+    const el = document.getElementById('dayPills');
+    el.innerHTML = '';
+    dias.forEach(d => {
+      const pill = document.createElement('div');
+      pill.className = 'day-pill' + (state.selected.dias.has(d) ? ' active' : '');
+      pill.textContent = String(d).padStart(2,'0');
+      pill.dataset.dia = d;
+      pill.addEventListener('click', () => {
+        if(state.selected.dias.has(d)) state.selected.dias.delete(d); else state.selected.dias.add(d);
+        refresh();
+      });
+      el.appendChild(pill);
+    });
+  }
+
+  function updateDayPillsActiveState(){
+    document.querySelectorAll('#dayPills .day-pill').forEach(p => {
+      const d = Number(p.dataset.dia);
+      p.classList.toggle('active', state.selected.dias.has(d));
+    });
+    document.getElementById('diaSelCount').textContent = state.selected.dias.size;
+  }
+
+  document.getElementById('clearDaysBtn').addEventListener('click', () => {
+    state.selected.dias.clear();
+    refresh();
+  });
+
+  // ---------- Day pills da página de Reincidências (filtro independente do Painel) ----------
+  function renderDayPillsRecid(){
+    const dias = Array.from(new Set(state.rows.map(r => r.Dia).filter(d => d !== null))).sort((a,b)=>a-b);
+    const el = document.getElementById('dayPillsRecid');
+    el.innerHTML = '';
+    dias.forEach(d => {
+      const pill = document.createElement('div');
+      pill.className = 'day-pill' + (state.selected.diasRecid.has(d) ? ' active' : '');
+      pill.textContent = String(d).padStart(2,'0');
+      pill.dataset.dia = d;
+      pill.addEventListener('click', () => {
+        if(state.selected.diasRecid.has(d)) state.selected.diasRecid.delete(d); else state.selected.diasRecid.add(d);
+        renderRecidivismPage();
+      });
+      el.appendChild(pill);
+    });
+  }
+
+  function updateDayPillsActiveStateRecid(){
+    document.querySelectorAll('#dayPillsRecid .day-pill').forEach(p => {
+      const d = Number(p.dataset.dia);
+      p.classList.toggle('active', state.selected.diasRecid.has(d));
+    });
+    document.getElementById('diaSelCountRecid').textContent = state.selected.diasRecid.size;
+  }
+
+  document.getElementById('clearDaysBtnRecid').addEventListener('click', () => {
+    state.selected.diasRecid.clear();
+    renderRecidivismPage();
+  });
+
+  // ---------- Zona (UB / RR) na página de Reincidências ----------
+  const ZONA_LABELS = { UB: 'UB (Urbano)', RR: 'RR (Rural)' };
+  function renderZonaPills(){
+    const el = document.getElementById('zonaPillsRecid');
+    el.innerHTML = '';
+    ['UB','RR'].forEach(z => {
+      const pill = document.createElement('div');
+      pill.className = 'day-pill' + (state.selected.zonaRecid.has(z) ? ' active' : '');
+      pill.style.width = 'auto';
+      pill.style.padding = '0 14px';
+      pill.textContent = ZONA_LABELS[z];
+      pill.dataset.zona = z;
+      pill.addEventListener('click', () => {
+        if(state.selected.zonaRecid.has(z)) state.selected.zonaRecid.delete(z); else state.selected.zonaRecid.add(z);
+        renderRecidivismPage();
+      });
+      el.appendChild(pill);
+    });
+  }
+  renderZonaPills();
+
+  function updateZonaPillsActiveState(){
+    document.querySelectorAll('#zonaPillsRecid .day-pill').forEach(p => {
+      p.classList.toggle('active', state.selected.zonaRecid.has(p.dataset.zona));
+    });
+  }
+
+  document.getElementById('resetZonaBtn').addEventListener('click', () => {
+    state.selected.zonaRecid = new Set(['UB','RR']);
+    renderRecidivismPage();
+  });
+
+  // ---------- Colunas exibidas na tabela ----------
+  function buildColCheckList(){
+    const el = document.getElementById('colCheckList');
+    el.innerHTML = '';
+    COLS.forEach(c => {
+      const label = document.createElement('label');
+      label.className = 'col-check';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = cfg.visibleCols[c.key];
+      input.addEventListener('change', () => {
+        cfg.visibleCols[c.key] = input.checked;
+        refresh();
+      });
+      const span = document.createElement('span');
+      span.textContent = c.label;
+      label.appendChild(input);
+      label.appendChild(span);
+      el.appendChild(label);
+    });
+  }
+  buildColCheckList();
+
+  document.getElementById('colAllBtn').addEventListener('click', () => {
+    COLS.forEach(c => cfg.visibleCols[c.key] = true);
+    buildColCheckList();
+    refresh();
+  });
+  document.getElementById('colNoneBtn').addEventListener('click', () => {
+    COLS.forEach(c => cfg.visibleCols[c.key] = false);
+    buildColCheckList();
+    refresh();
+  });
+
+  // ---------- Nav tabs (Painel / Reincidências) ----------
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.view;
+      // só alterna entre as duas views se já houver dados carregados
+      if(document.getElementById('emptyState').style.display === 'none'){
+        document.getElementById('dashboard').style.display = (target === 'dashboard') ? 'block' : 'none';
+        document.getElementById('viewRecid').style.display = (target === 'viewRecid') ? 'block' : 'none';
+      }
+    });
+  });
+
+  // ---------- Baixar tabelas em Excel (.xlsx via SheetJS) ----------
+  function stampNow(){ return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+
+  function exportSheetsToExcel(sheets, filename){
+    if(typeof XLSX === 'undefined'){
+      alert('Não foi possível carregar a biblioteca de Excel (verifique sua conexão com a internet) e tente novamente.');
+      return;
+    }
+    const wb = XLSX.utils.book_new();
+    sheets.forEach(s => {
+      const ws = XLSX.utils.aoa_to_sheet(s.rows);
+      XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0,31));
+    });
+    XLSX.writeFile(wb, filename);
+  }
+
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    const cols = getVisibleCols();
+    const header = cols.map(c => c.label);
+    const rows = state.filtered.map(r => cols.map(c => {
+      const val = r[c.key];
+      if(c.type === 'dec') return Number((val||0).toFixed(6));
+      return (val === null || val === undefined) ? '' : val;
+    }));
+    exportSheetsToExcel([{name:'Ocorrencias', rows:[header, ...rows]}], 'ocorrencias_'+stampNow()+'.xlsx');
+  });
+
+  // ---------- Extração extra: padrão Elemento / UCs / Reinc. 7D / Ult. Ocorr. / Localidade / Polo / Última Causa / Equipe ----------
+  function daysBetween(a, b){
+    if(a.Ano==null || a.Mes==null || a.Dia==null || b.Ano==null || b.Mes==null || b.Dia==null) return null;
+    const d1 = Date.UTC(a.Ano, a.Mes-1, a.Dia);
+    const d2 = Date.UTC(b.Ano, b.Mes-1, b.Dia);
+    return Math.round((d2-d1)/86400000);
+  }
+
+  function computeElementPatternRows(elementos){
+    return elementos.map(e => {
+      const occ = e.rows; // já ordenado cronologicamente (mergeOccurrenceGroup + dedupeOccurrences)
+      const last = occ[occ.length-1];
+      const ultOcorrStr = (last.Ano && last.Mes && last.Dia)
+        ? (String(last.Ano) + '-' + String(last.Mes).padStart(2,'0') + '-' + String(last.Dia).padStart(2,'0'))
+        : '';
+      const reinc7d = occ.filter(r => {
+        const diff = daysBetween(r, last);
+        return diff !== null && diff <= 6;
+      }).length;
+      return [
+        e.cod,
+        (last.Clientes > 0) ? last.Clientes : '',
+        reinc7d,
+        ultOcorrStr,
+        last.Localidade || '',
+        last.Polo || '',
+        last.Subcausa || '',
+        last.Equipe || ''
+      ];
+    });
+  }
+
+  document.getElementById('downloadElementPatternBtn').addEventListener('click', () => {
+    const data = computeRecidivismData();
+    const header = ['Elemento','UCs','Reinc. 7D','Ult. Ocorr.','Localidade','Polo','Última Causa','Equipe'];
+    const rows = computeElementPatternRows(data.elementos);
+    exportSheetsToExcel([{name:'Export', rows:[header, ...rows]}], 'elementos_padrao_'+stampNow()+'.xlsx');
+  });
+
+  document.getElementById('downloadRecidBtn').addEventListener('click', () => {
+    const data = computeRecidivismData();
+
+    const sumHeader = RECID_COLS.map(c => c.label);
+    const sumRows = data.recorrentes.map(e => RECID_COLS.map(c => {
+      const val = e[c.key];
+      if(c.type === 'dec') return Number((val||0).toFixed(6));
+      if(Array.isArray(val)) return val.join(', ');
+      return (val === null || val === undefined) ? '' : val;
+    }));
+
+    const detHeader = ['Elemento interrompido','Tipo','Nº Ocorrência','Dia','Zona','Intervalo desde a origem (dias)','Duração (min)','Causa/Subcausa','Clientes','Localidades atingidas','Observação'];
+    const detRows = [];
+    data.recorrentes.forEach(e => {
+      const origemDia = e.rows.length ? e.rows[0].Dia : null;
+      e.rows.forEach((r, idx) => {
+        const isOrigem = (idx === 0);
+        const intervalo = (!isOrigem && r.Dia !== null && origemDia !== null) ? (r.Dia - origemDia) : '';
+        detRows.push([
+          e.cod,
+          isOrigem ? 'ORIGEM' : ('REINCIDÊNCIA ' + idx),
+          r.OcorrenciaNum || '',
+          r.Dia,
+          (r.Zonas||[]).join('/'),
+          intervalo,
+          r.Duracao,
+          r.CausaSubcausa || '',
+          r.Clientes,
+          (r.Localidades||[]).join(', '),
+          r.Observacao || ''
+        ]);
+      });
+    });
+
+    exportSheetsToExcel([
+      {name:'Elementos_Reincidentes', rows:[sumHeader, ...sumRows]},
+      {name:'Detalhe_Ocorrencias', rows:[detHeader, ...detRows]}
+    ], 'reincidencias_'+stampNow()+'.xlsx');
+  });
+
+  // ---------- File handling ----------
+  document.getElementById('fileInput').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    document.getElementById('uploadLabel').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      let text;
+      try{
+        const decoder = new TextDecoder('windows-1252');
+        text = decoder.decode(ev.target.result);
+      }catch(err){
+        text = new TextDecoder('utf-8').decode(ev.target.result);
+      }
+      try{
+        const rows = parseFile(text);
+        state.rows = rows;
+        state.totalRaw = rows.length;
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('openConfigBtn').disabled = false;
+        populateFilterLists();
+        renderDayPills();
+        renderDayPillsRecid();
+        refresh();
+      }catch(err){
+        alert('Não foi possível ler o arquivo: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  // ---------- Search ----------
+  document.getElementById('searchInput').addEventListener('input', () => refresh());
+
+  // ---------- Drawer open/close ----------
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('overlay');
+  function openDrawer(){ drawer.classList.add('open'); overlay.classList.add('open'); }
+  function closeDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); }
+  document.getElementById('openConfigBtn').addEventListener('click', openDrawer);
+  document.getElementById('closeConfigBtn').addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', closeDrawer);
+
+  // ---------- Mode radio ----------
+  document.getElementById('modeGroup').addEventListener('click', (e) => {
+    const opt = e.target.closest('.radio-opt');
+    if(!opt) return;
+    document.querySelectorAll('#modeGroup .radio-opt').forEach(o=>o.classList.remove('active'));
+    opt.classList.add('active');
+    cfg.mode = opt.dataset.mode;
+  });
+
+  // ---------- Apply / Reset ----------
+  function readInputsIntoCfg(){
+    cfg.cutIdec = parseFloat(document.getElementById('cutIdec').value) || 0;
+    cfg.cutIfec = parseFloat(document.getElementById('cutIfec').value) || 0;
+    cfg.cutDur = parseFloat(document.getElementById('cutDur').value) || 0;
+    cfg.excludeCritical = document.getElementById('excludeCritical').checked;
+    cfg.applyRelevance = document.getElementById('applyRelevance').checked;
+    const mc = document.getElementById('minClientes').value;
+    const md = document.getElementById('minDuracao').value;
+    const dmin = document.getElementById('diaMin').value;
+    const dmax = document.getElementById('diaMax').value;
+    cfg.minClientes = mc === '' ? null : parseFloat(mc);
+    cfg.minDuracao = md === '' ? null : parseFloat(md);
+    cfg.diaMin = dmin === '' ? null : parseFloat(dmin);
+    cfg.diaMax = dmax === '' ? null : parseFloat(dmax);
+    cfg.cutRecid = parseFloat(document.getElementById('cutRecid').value) || 1;
+  }
+
+  document.getElementById('applyBtn').addEventListener('click', () => {
+    readInputsIntoCfg();
+    refresh();
+    closeDrawer();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    document.getElementById('cutIdec').value = 0.00046;
+    document.getElementById('cutIfec').value = 0.00026;
+    document.getElementById('cutDur').value = 1340;
+    document.getElementById('excludeCritical').checked = true;
+    document.getElementById('applyRelevance').checked = true;
+    document.getElementById('minClientes').value = '';
+    document.getElementById('minDuracao').value = '';
+    document.getElementById('diaMin').value = '';
+    document.getElementById('diaMax').value = '';
+    document.getElementById('cutRecid').value = 2;
+    document.querySelectorAll('#modeGroup .radio-opt').forEach(o=>o.classList.remove('active'));
+    document.querySelector('#modeGroup .radio-opt[data-mode="OR"]').classList.add('active');
+    cfg.mode = 'OR';
+    state.selected.regional.clear();
+    state.selected.polo.clear();
+    state.selected.causa.clear();
+    state.selected.dias.clear();
+    state.selected.diasRecid.clear();
+    state.selected.zonaRecid = new Set(['UB','RR']);
+    renderZonaPills();
+    COLS.forEach(c => cfg.visibleCols[c.key] = true);
+    buildColCheckList();
+    populateFilterLists();
+    renderDayPills();
+    renderDayPillsRecid();
+    readInputsIntoCfg();
+    refresh();
+  });
+
+  // live-apply on Enter key inside number inputs
+  ['cutIdec','cutIfec','cutDur','minClientes','minDuracao','diaMin','diaMax','cutRecid'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ readInputsIntoCfg(); refresh(); }
+    });
+  });
+  document.getElementById('excludeCritical').addEventListener('change', () => { readInputsIntoCfg(); refresh(); });
+  document.getElementById('applyRelevance').addEventListener('change', () => { readInputsIntoCfg(); refresh(); });
+
+})();
+</script>
+</body>
+</html>
