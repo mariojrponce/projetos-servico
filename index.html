@@ -559,14 +559,14 @@
         <div class="sub">tempo acumulado de interrupção</div>
       </div>
       <div class="kpi" style="--accent:var(--green)">
-        <div class="label">Contrib. IDEC ETO</div>
+        <div class="label">DEC ETO</div>
         <div class="value" id="kpiIdec">0,000000</div>
-        <div class="sub">impacto no indicador de duração</div>
+        <div class="sub">impacto no indicador de duração · <span id="kpiIdecCritico">0,000000</span> em dia crítico</div>
       </div>
       <div class="kpi" style="--accent:var(--purple)">
-        <div class="label">Contrib. IFEC ETO</div>
+        <div class="label">FEC ETO</div>
         <div class="value" id="kpiIfec">0,000000</div>
-        <div class="sub">impacto no indicador de frequência</div>
+        <div class="sub">impacto no indicador de frequência · <span id="kpiIfecCritico">0,000000</span> em dia crítico</div>
       </div>
       <div class="kpi" style="--accent:#F472B6">
         <div class="label">Compensação (R$)</div>
@@ -766,7 +766,7 @@
       <h3>Regras gerais</h3>
       <div class="toggle-row">
         <span>Excluir dia crítico (STA_CALC_IND_HDE = "C")</span>
-        <label class="switch"><input type="checkbox" id="excludeCritical" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="excludeCritical"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
         <span>Aplicar critério de relevância</span>
@@ -776,7 +776,7 @@
         <span>Incluir ocorrências individuais (TMAE)</span>
         <label class="switch"><input type="checkbox" id="includeIndividual" checked><span class="slider"></span></label>
       </div>
-      <div class="cfg-row hint">Desligue "Aplicar critério" para navegar por todas as ocorrências (após exclusão do dia crítico) e usar só os filtros manuais abaixo. "Incluir individuais" traz reclamações de cliente único do TMAE — elas não têm IDEC/IFEC/duração de rede, então sempre aparecem quando ligado, independente do critério de relevância.</div>
+      <div class="cfg-row hint">Por padrão, todas as ocorrências entram — mesmo as de dia crítico (elas ficam sinalizadas com uma tag "DIA CRÍTICO" ao lado do Nº Ocorrência na tabela, e o quanto pesam no DEC/FEC ETO aparece nos cards do topo). Ligue "Excluir dia crítico" se quiser removê-las do recorte. "Incluir individuais" traz reclamações de cliente único do TMAE — elas não têm IDEC/IFEC/duração de rede, então sempre aparecem quando ligado, independente do critério de relevância.</div>
     </div>
 
     <div class="cfg-section">
@@ -868,7 +868,7 @@
     cutIdec: 0.00046,
     cutIfec: 0.00026,
     cutDur: 1340,
-    excludeCritical: true,
+    excludeCritical: false,
     applyRelevance: false,
     includeIndividual: true,
     minClientes: 100,
@@ -1311,7 +1311,14 @@
             : '<span class="tag idec">COLETIVA</span>';
         } else if(c.type === 'mono'){
           td.className = 'mono';
-          td.textContent = val || '';
+          if(c.key === 'OcorrenciaNum'){
+            td.classList.add('tag-cell');
+            const numTxt = escapeHtml(val || '');
+            const critTag = (r.StaCalc === 'C') ? ' <span class="tag reinc" title="STA_CALC_IND_HDE = C">DIA CRÍTICO</span>' : '';
+            td.innerHTML = numTxt + critTag;
+          } else {
+            td.textContent = val || '';
+          }
         } else if(c.type === 'obs'){
           td.className = 'obs';
           td.textContent = val || '';
@@ -1333,6 +1340,8 @@
     const totalDurH = rows.reduce((s,r)=>s+r.Duracao,0)/60;
     const totalIdec = rows.reduce((s,r)=>s+r.IdecEto,0);
     const totalIfec = rows.reduce((s,r)=>s+r.IfecEto,0);
+    const idecCritico = rows.filter(r=>r.StaCalc==='C').reduce((s,r)=>s+r.IdecEto,0);
+    const ifecCritico = rows.filter(r=>r.StaCalc==='C').reduce((s,r)=>s+r.IfecEto,0);
     // Compensação é um valor por OCORRÊNCIA, não por linha — uma ocorrência com várias localidades
     // gera várias linhas repetindo o mesmo valor. Soma só 1x por número de ocorrência único.
     const multaSeen = new Set();
@@ -1347,11 +1356,13 @@
     const totalIndividual = rows.filter(r=>r.TipoOcorrencia==='INDIVIDUAL').length;
 
     document.getElementById('kpiTotal').textContent = fmtInt(rows.length);
-    document.getElementById('kpiTotalSub').textContent = 'de ' + fmtInt(state.totalAfterCritical) + ' (após excluir dia crítico) · ' + fmtInt(totalIndividual) + ' individuais';
+    document.getElementById('kpiTotalSub').textContent = 'de ' + fmtInt(state.totalAfterCritical) + ' ocorrências carregadas · ' + fmtInt(totalIndividual) + ' individuais';
     document.getElementById('kpiClientes').textContent = fmtInt(totalClientes);
     document.getElementById('kpiDuracao').textContent = totalDurH.toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'h';
     document.getElementById('kpiIdec').textContent = fmtDec(totalIdec, 6);
     document.getElementById('kpiIfec').textContent = fmtDec(totalIfec, 6);
+    document.getElementById('kpiIdecCritico').textContent = fmtDec(idecCritico, 6);
+    document.getElementById('kpiIfecCritico').textContent = fmtDec(ifecCritico, 6);
     document.getElementById('kpiMulta').textContent = 'R$ ' + fmtMoney(totalMulta);
     document.getElementById('rowCount').textContent = fmtInt(rows.length);
   }
@@ -2162,7 +2173,7 @@
     document.getElementById('cutIdec').value = 0.00046;
     document.getElementById('cutIfec').value = 0.00026;
     document.getElementById('cutDur').value = 1340;
-    document.getElementById('excludeCritical').checked = true;
+    document.getElementById('excludeCritical').checked = false;
     document.getElementById('applyRelevance').checked = false;
     document.getElementById('includeIndividual').checked = true;
     document.getElementById('minClientes').value = 100;
