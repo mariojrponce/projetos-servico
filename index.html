@@ -612,8 +612,7 @@
     <div class="toolbar">
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input type="text" id="searchInput" placeholder="Buscar por causa, elemento, alimentador, observação...">
-      </div>
+        <input type="text" id="searchInput" placeholder="Buscar por nº ocorrência, causa, elemento, zona, localidade, polo, regional, equipe, dia crítico...">      </div>
       <div class="count-pill"><b id="rowCount">0</b>&nbsp;ocorrências exibidas</div>
       <button class="btn download" id="downloadBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
@@ -692,7 +691,10 @@
     </div>
 
     <div class="toolbar">
-      <div style="flex:1; font-size:12px; color:var(--muted);">Elementos reincidentes no recorte atual</div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="searchInputRecid" placeholder="Buscar por elemento, ocorrência, zona, abrangência, causa, regional, polo, equipe...">
+      </div>
       <button class="btn download" id="downloadElementPatternBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
         Baixar Excel (padrão Elemento/UCs/Reinc. 7D)
@@ -1185,12 +1187,23 @@
 
     const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
     if(term){
+      const normTerm = term.normalize ? term.normalize('NFD').replace(/[\u0300-\u036f]/g,'') : term;
+      const critMatch = normTerm.length >= 2 && 'critico'.includes(normTerm);
       rows = rows.filter(r =>
-        r.CausaSubcausa.toLowerCase().includes(term) ||
-        r.ElementoAlimentador.toLowerCase().includes(term) ||
-        r.Observacao.toLowerCase().includes(term) ||
-        r.Localidade.toLowerCase().includes(term) ||
-        r.Conjunto.toLowerCase().includes(term)
+        (r.OcorrenciaNum||'').toLowerCase().includes(term) ||
+        (r.CausaSubcausa||'').toLowerCase().includes(term) ||
+        (r.ElementoAlimentador||'').toLowerCase().includes(term) ||
+        (r.ElementoInterrompido||'').toLowerCase().includes(term) ||
+        (r.Observacao||'').toLowerCase().includes(term) ||
+        (r.Localidade||'').toLowerCase().includes(term) ||
+        (r.Conjunto||'').toLowerCase().includes(term) ||
+        (r.Zona||'').toLowerCase().includes(term) ||
+        (r.Polo||'').toLowerCase().includes(term) ||
+        (r.Regional||'').toLowerCase().includes(term) ||
+        (r.Equipe||'').toLowerCase().includes(term) ||
+        (r.TipoOcorrencia||'').toLowerCase().includes(term) ||
+        (r.Abrangencia||'').toLowerCase().includes(term) ||
+        (critMatch && r.StaCalc === 'C')
       );
     }
 
@@ -1537,8 +1550,27 @@
   let recidSortKey = 'count', recidSortDir = 'desc';
   let recidExpanded = null; // cod do elemento expandido no momento
 
+  function matchesRecidSearch(e, term){
+    if((e.cod||'').toLowerCase().includes(term)) return true;
+    if((e.causaPrincipal||'').toLowerCase().includes(term)) return true;
+    if((e.zonas||[]).some(z => (z||'').toLowerCase().includes(term))) return true;
+    if((e.abrangencias||[]).some(a => (a||'').toLowerCase().includes(term))) return true;
+    if((e.regionais||[]).some(r => (r||'').toLowerCase().includes(term))) return true;
+    if((e.polos||[]).some(p => (p||'').toLowerCase().includes(term))) return true;
+    return (e.rows||[]).some(r =>
+      (r.OcorrenciaNum||'').toLowerCase().includes(term) ||
+      (r.Equipe||'').toLowerCase().includes(term) ||
+      (r.Localidade||'').toLowerCase().includes(term) ||
+      (r.CausaSubcausa||'').toLowerCase().includes(term)
+    );
+  }
+
   function renderRecidivismPage(){
     const data = computeRecidivismData();
+    const termRecid = (document.getElementById('searchInputRecid').value || '').toLowerCase().trim();
+    if(termRecid){
+      data.recorrentes = data.recorrentes.filter(e => matchesRecidSearch(e, termRecid));
+    }
     document.getElementById('recidPageThreshold').textContent = cfg.cutRecid;
 
     const periodoEl = document.getElementById('recidPagePeriodo');
@@ -2125,6 +2157,7 @@
 
   // ---------- Search ----------
   document.getElementById('searchInput').addEventListener('input', () => refresh());
+  document.getElementById('searchInputRecid').addEventListener('input', () => renderRecidivismPage());
 
   // ---------- Drawer open/close ----------
   const drawer = document.getElementById('drawer');
