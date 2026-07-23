@@ -104,7 +104,7 @@
 
   /* ---------- KPI cards ---------- */
   .kpis{
-    display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:18px;
+    display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:18px;
   }
   @media (max-width:1100px){ .kpis{ grid-template-columns:repeat(2,1fr);} }
   .kpi{
@@ -200,6 +200,13 @@
   }
   tbody tr:hover{ background:rgba(34,211,238,0.04); }
   td.num{ font-family:'IBM Plex Mono',monospace; text-align:right; white-space:nowrap; }
+
+  /* Centraliza todas as colunas de todas as tabelas (Painel, Reincidência e sub-tabelas de detalhe) */
+  #dataTable th, #dataTable td,
+  #recidTable th, #recidTable td,
+  .detail-inner th, .detail-inner td{
+    text-align:center !important;
+  }
   td.mono{ font-family:'IBM Plex Mono',monospace; white-space:nowrap; }
   td.obs{ max-width:320px; color:var(--muted); line-height:1.4; }
   td.tag-cell{ white-space:nowrap; }
@@ -300,6 +307,58 @@
   footer{ text-align:center; padding:24px; color:var(--muted-2); font-size:11px; }
 
   /* ---------- Nav tabs ---------- */
+  /* ---------- Import modal (Crítica / TMAE / Compensação) ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(4,7,14,0.65); z-index:80; opacity:0; pointer-events:none;
+    transition:opacity .2s; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .modal-overlay.open{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    width:100%; max-width:720px; max-height:88vh; overflow-y:auto; background:var(--panel);
+    border:1px solid var(--line); border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    transform:translateY(10px); transition:transform .2s;
+  }
+  .modal-overlay.open .modal-box{ transform:translateY(0); }
+  .modal-head{ padding:20px 24px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; justify-content:space-between; }
+  .modal-head h2{ font-family:'Space Grotesk',sans-serif; font-size:17px; margin:0 0 4px 0; }
+  .modal-head p{ font-size:12px; color:var(--muted); margin:0; max-width:520px; line-height:1.5; }
+  .modal-close{ background:none; border:none; color:var(--muted); padding:4px; flex-shrink:0; }
+  .modal-close:hover{ color:var(--text); }
+  .modal-body{ padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+  .modal-foot{ padding:16px 24px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; }
+
+  .import-card{
+    border:1px solid var(--line); border-radius:10px; padding:16px 18px; background:var(--panel-2);
+    transition:border-color .15s;
+  }
+  .import-card.success{ border-color:rgba(52,211,153,0.4); }
+  .import-card.error{ border-color:rgba(248,113,113,0.5); }
+  .import-card-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .import-card-title{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:13.5px; }
+  .import-card-title svg{ width:16px; height:16px; color:var(--muted); flex-shrink:0; }
+  .import-badge{ font-size:9.5px; font-weight:700; letter-spacing:0.04em; padding:2px 7px; border-radius:10px; }
+  .import-badge.required{ background:rgba(248,113,113,0.15); color:var(--red); }
+  .import-badge.optional{ background:rgba(124,138,168,0.15); color:var(--muted); }
+  .import-card-desc{ font-size:11.5px; color:var(--muted); margin:6px 0 12px 0; line-height:1.5; }
+  .import-row{ display:flex; align-items:center; gap:10px; }
+  .import-row .file-input{ display:none; }
+  .import-row label{
+    display:inline-flex; align-items:center; gap:7px; cursor:pointer; background:var(--panel);
+    border:1px solid var(--line); padding:8px 13px; border-radius:7px; font-size:12.5px; font-weight:600; color:var(--text);
+    white-space:nowrap;
+  }
+  .import-row label:hover{ border-color:var(--muted-2); }
+  .import-row label svg{ width:14px; height:14px; }
+  .import-status{ font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; min-width:0; }
+  .import-status .dot{ width:8px; height:8px; border-radius:50%; background:var(--muted-2); flex-shrink:0; }
+  .import-card.success .import-status .dot{ background:var(--green); }
+  .import-card.error .import-status .dot{ background:var(--red); }
+  .import-card.loading .import-status .dot{ background:var(--amber); animation:pulseDot 1s infinite; }
+  @keyframes pulseDot{ 50%{ opacity:0.3; } }
+  .import-status .txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .import-card.success .import-status .txt{ color:var(--green); }
+  .import-card.error .import-status .txt{ color:var(--red); }
+
   .nav-tabs{ display:flex; gap:4px; margin:12px 0 0 0; }
   .nav-tab{
     background:none; border:none; color:var(--muted); font-size:13px; font-weight:600;
@@ -371,11 +430,10 @@
         </div>
       </div>
       <div class="header-actions">
-        <label class="btn primary" for="fileInput">
+        <button class="btn" id="openImportBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-          <span id="uploadLabel">Carregar .txt</span>
-        </label>
-        <input type="file" id="fileInput" class="file-input" accept=".txt,.csv">
+          <span id="importSummaryLabel">Importar dados</span>
+        </button>
         <button class="btn" id="openConfigBtn" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h6M4 12h12M4 18h8"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="18" r="2"/></svg>
           Critérios
@@ -394,13 +452,92 @@
   </div>
 </header>
 
+<!-- ============ Modal de Importação ============ -->
+<div class="modal-overlay" id="importOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h2>Importar bases</h2>
+        <p>Carregue os arquivos-fonte. Só a Crítica é obrigatória — TMAE e Compensação enriquecem o painel e a página de Reincidências, mas o painel funciona sem eles. Processamento 100% local, nenhum dado sai do seu navegador.</p>
+      </div>
+      <button class="modal-close" id="closeImportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <div class="import-card" id="importCardCritica">
+        <div class="import-card-top">
+          <div class="import-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            Crítica de Ocorrências (.txt)
+          </div>
+          <span class="import-badge required">obrigatório</span>
+        </div>
+        <div class="import-card-desc">Base principal: ocorrências coletivas da rede (a mesma fonte já usada no Power Query). Todo o painel e a reincidência partem daqui.</div>
+        <div class="import-row">
+          <label for="fileInputCritica">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            Selecionar arquivo
+          </label>
+          <input type="file" id="fileInputCritica" class="file-input" accept=".txt,.csv">
+          <div class="import-status" id="statusCritica"><span class="dot"></span><span class="txt">Nenhum arquivo selecionado</span></div>
+        </div>
+      </div>
+
+      <div class="import-card" id="importCardTmae">
+        <div class="import-card-top">
+          <div class="import-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            TMAE — Deslocamento de Equipes (.txt)
+          </div>
+          <span class="import-badge optional">opcional</span>
+        </div>
+        <div class="import-card-desc">Ocorrências com deslocamento de equipe. As do tipo COLETIVA enriquecem a Crítica (equipe, tempo de atendimento); as INDIVIDUAL (reclamação de 1 cliente) entram como ocorrências próprias no painel e na reincidência.</div>
+        <div class="import-row">
+          <label for="fileInputTmae">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            Selecionar arquivo
+          </label>
+          <input type="file" id="fileInputTmae" class="file-input" accept=".txt,.csv">
+          <div class="import-status" id="statusTmae"><span class="dot"></span><span class="txt">Nenhum arquivo selecionado</span></div>
+        </div>
+      </div>
+
+      <div class="import-card" id="importCardComp">
+        <div class="import-card-top">
+          <div class="import-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            Compensação (.xlsx)
+          </div>
+          <span class="import-badge optional">opcional</span>
+        </div>
+        <div class="import-card-desc">Valor de compensação (multa) pago por ocorrência — coletiva ou individual. Vinculado pelo número da ocorrência.</div>
+        <div class="import-row">
+          <label for="fileInputComp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            Selecionar arquivo
+          </label>
+          <input type="file" id="fileInputComp" class="file-input" accept=".xlsx,.xls">
+          <div class="import-status" id="statusComp"><span class="dot"></span><span class="txt">Nenhum arquivo selecionado</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="closeImportBtnFoot">Concluir</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="shell">
 
   <div id="emptyState" class="empty-state">
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
     <h2>Nenhum arquivo carregado</h2>
-    <p>Carregue o arquivo <b>Critica__072026.txt</b> (mesma fonte usada no Power Query) para gerar o painel. Todo o processamento acontece no seu navegador — nenhum dado é enviado a servidor algum.</p>
-    <label class="btn primary" for="fileInput">Selecionar arquivo</label>
+    <p>Carregue o arquivo <b>Critica__072026.txt</b> (obrigatório) para gerar o painel. Você também pode carregar o <b>TMAE (.txt)</b> e a <b>Compensação (.xlsx)</b> — eles enriquecem o painel e a página de Reincidências com equipe, tempo de atendimento e valor de compensação, mas não são obrigatórios. Todo o processamento acontece no seu navegador — nenhum dado é enviado a servidor algum.</p>
+    <button class="btn primary" id="openImportBtnEmpty">Importar arquivos</button>
   </div>
 
   <div id="dashboard" style="display:none;">
@@ -430,6 +567,11 @@
         <div class="label">Contrib. IFEC ETO</div>
         <div class="value" id="kpiIfec">0,000000</div>
         <div class="sub">impacto no indicador de frequência</div>
+      </div>
+      <div class="kpi" style="--accent:#F472B6">
+        <div class="label">Compensação (R$)</div>
+        <div class="value" id="kpiMulta" style="font-size:19px;">R$ 0,00</div>
+        <div class="sub">soma da Compensação vinculada, individual + coletiva</div>
       </div>
     </div>
 
@@ -532,6 +674,16 @@
         <div class="value" id="rkDuracao">0h</div>
         <div class="sub">tempo acumulado nesses elementos</div>
       </div>
+      <div class="kpi" style="--accent:#38BDF8">
+        <div class="label">TMA médio (TMAE)</div>
+        <div class="value" id="rkTma" style="font-size:19px;">—</div>
+        <div class="sub">tempo médio de atendimento, quando disponível</div>
+      </div>
+      <div class="kpi" style="--accent:#F472B6">
+        <div class="label">Compensação total (R$)</div>
+        <div class="value" id="rkMulta" style="font-size:19px;">R$ 0,00</div>
+        <div class="sub">soma nos elementos reincidentes · uma ocorrência que atinge mais de 1 elemento conta em cada um</div>
+      </div>
     </div>
 
     <div class="bars-panel">
@@ -618,9 +770,13 @@
       </div>
       <div class="toggle-row">
         <span>Aplicar critério de relevância</span>
-        <label class="switch"><input type="checkbox" id="applyRelevance" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="applyRelevance"><span class="slider"></span></label>
       </div>
-      <div class="cfg-row hint">Desligue "Aplicar critério" para navegar por todas as ocorrências (após exclusão do dia crítico) e usar só os filtros manuais abaixo.</div>
+      <div class="toggle-row">
+        <span>Incluir ocorrências individuais (TMAE)</span>
+        <label class="switch"><input type="checkbox" id="includeIndividual" checked><span class="slider"></span></label>
+      </div>
+      <div class="cfg-row hint">Desligue "Aplicar critério" para navegar por todas as ocorrências (após exclusão do dia crítico) e usar só os filtros manuais abaixo. "Incluir individuais" traz reclamações de cliente único do TMAE — elas não têm IDEC/IFEC/duração de rede, então sempre aparecem quando ligado, independente do critério de relevância.</div>
     </div>
 
     <div class="cfg-section">
@@ -637,13 +793,14 @@
       <div class="cfg-row-inline">
         <div class="cfg-row">
           <label>Clientes ≥</label>
-          <input type="number" id="minClientes" placeholder="0">
+          <input type="number" id="minClientes" placeholder="0" value="100">
         </div>
         <div class="cfg-row">
           <label>Duração ≥ (min)</label>
-          <input type="number" id="minDuracao" placeholder="0">
+          <input type="number" id="minDuracao" placeholder="0" value="180">
         </div>
       </div>
+      <div class="cfg-row hint" style="margin-top:-6px;">Padrão: Clientes ≥ 100 e Duração ≥ 180 min (3 horas). Ocorrências individuais (TMAE) sempre ignoram esses dois filtros, já que valem 1 cliente por definição.</div>
       <div class="cfg-row-inline">
         <div class="cfg-row">
           <label>Dia (de)</label>
@@ -691,7 +848,14 @@
 (function(){
 
   const state = {
-    rows: [],           // todas as linhas parseadas (objetos tipados)
+    criticaRawRows: [],  // linhas da Crítica, sem enriquecimento
+    tmaeIndividualRows: [], // linhas INDIVIDUAL do TMAE, já no formato unificado
+    tmaeByOcorrencia: new Map(), // ocorrenciaNum -> [{Equipe,TMA}, ...] (somente COLETIVA)
+    compByOcorrencia: new Map(), // ocorrenciaNum -> {MultaOs, ...}
+    tmaeLoaded: false,
+    compLoaded: false,
+    dayDefaultsApplied: false,
+    rows: [],            // unificado: Crítica (coletiva) + TMAE individual, já enriquecido
     totalRaw: 0,
     filtered: [],
     sortKey: 'Dia',
@@ -705,9 +869,10 @@
     cutIfec: 0.00026,
     cutDur: 1340,
     excludeCritical: true,
-    applyRelevance: true,
-    minClientes: null,
-    minDuracao: null,
+    applyRelevance: false,
+    includeIndividual: true,
+    minClientes: 100,
+    minDuracao: 180, // 3 horas
     diaMin: null,
     diaMax: null,
     cutRecid: 2,
@@ -733,8 +898,12 @@
   function parseBRDateTime(v){
     if(!v) return null;
     v = v.trim();
-    // formatos aceitos: dd/mm/yyyy hh:mm:ss | dd/mm/yyyy hh:mm | yyyy-mm-dd hh:mm:ss
+    // formatos aceitos: dd/mm/yyyy hh:mm:ss | dd-mm-yyyy hh:mm | yyyy-mm-dd hh:mm:ss
     let m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if(m){
+      return { day:+m[1], month:+m[2], year:+m[3], hour:+m[4], minute:+m[5] };
+    }
+    m = v.match(/^(\d{1,2})-(\d{1,2})-(\d{4})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if(m){
       return { day:+m[1], month:+m[2], year:+m[3], hour:+m[4], minute:+m[5] };
     }
@@ -808,16 +977,178 @@
         ElementoCod: elemento,
         ElementoInterrompido: elementoInterrompido,
         Zona: zona,
+        Abrangencia: abrangencia,
         ElementoAlimentador: [abrangencia, elemento].filter(Boolean).join(' ') + (alimentador ? (' / ' + alimentador) : '') + (regional ? (' (' + regional + ')') : ''),
         Localidade: localidade,
         Polo: polo,
         Regional: regional,
         Conjunto: conjunto,
         Observacao: obs,
-        StaCalc: staCalc
+        StaCalc: staCalc,
+        TipoOcorrencia: 'COLETIVA'
       });
     }
     return rows;
+  }
+
+  // ---------- Parsing do TMAE (.txt) ----------
+  function parseTMAE(text){
+    const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
+    if(lines.length < 2){ throw new Error('Arquivo TMAE vazio ou sem dados.'); }
+    const delim = detectDelimiter(lines[0]);
+    const header = lines[0].split(delim).map(h => h.replace(/^\uFEFF/,'').trim());
+    const idx = {};
+    header.forEach((h,i) => idx[h] = i);
+    const get = (parts, name) => idx[name] !== undefined ? parts[idx[name]] : '';
+
+    const individualRows = [];
+    const byOcorrencia = new Map();
+
+    for(let li=1; li<lines.length; li++){
+      const parts = lines[li].split(delim);
+      if(parts.length < 5) continue;
+      const g = (name) => get(parts, name);
+
+      const tipo = (g('TIPO_INTER_KTI')||'').trim().toUpperCase();
+      const ocorrenciaNum = (g('NUM_SEQ_OPER_ORIG_COS_TNT')||'').trim();
+      const tma = Math.round(parseNumSimple(g('TMA')));
+      const equipe = (g('EQUIPE')||'').trim();
+
+      if(tipo === 'COLETIVA'){
+        if(!byOcorrencia.has(ocorrenciaNum)) byOcorrencia.set(ocorrenciaNum, []);
+        byOcorrencia.get(ocorrenciaNum).push({ Equipe: equipe, TMA: tma });
+        continue;
+      }
+
+      // INDIVIDUAL: sem vínculo com a Crítica — vira uma ocorrência própria no modelo unificado
+      const causa = (g('DES_CAUSA_INTER_CAU')||'').trim();
+      const subcausa = (g('DES_SUB_CAUSA_INTER_SCR')||'').trim();
+      const elemento = (g('COD_INS_TRF_TNT')||'').trim();
+      const zona = (g('COD_TIPO_LOC_TRF_TNT')||'').trim();
+      const abrangencia = (g('ABRANGÊNCIA')||'').trim();
+      const localidade = (g('NOM_LOC_TNT')||'').trim();
+      const polo = (g('POLO')||'').trim();
+      const regional = (g('REGIONAL')||'').trim();
+      const conjunto = (g('DES_CONJ_TNT')||'').trim();
+      const alimentador = (g('DES_ALIM_TNT')||'').trim();
+      const obs = (g('DES_OBS_EXEC_SERV_TNT')||'').trim();
+      const staCalc = (g('IND_DIA_CRITICO')||'').trim();
+      const dt = parseBRDateTime(g('DTA_ORIG_TNT'));
+
+      individualRows.push({
+        OcorrenciaNum: ocorrenciaNum,
+        Ano: dt ? dt.year : null,
+        Dia: dt ? dt.day : null,
+        Mes: dt ? dt.month : null,
+        Hora: dt ? (String(dt.hour).padStart(2,'0') + ':' + String(dt.minute).padStart(2,'0')) : '',
+        Duracao: 0,
+        Clientes: 1,
+        IdecEto: 0,
+        IfecEto: 0,
+        CausaSubcausa: causa + (subcausa ? (' – ' + subcausa) : ''),
+        CausaPrincipal: causa,
+        Subcausa: subcausa,
+        ElementoCod: elemento,
+        ElementoInterrompido: elemento,
+        Zona: zona,
+        Abrangencia: abrangencia,
+        ElementoAlimentador: [abrangencia, elemento].filter(Boolean).join(' ') + (alimentador ? (' / ' + alimentador) : '') + (regional ? (' (' + regional + ')') : ''),
+        Localidade: localidade,
+        Polo: polo,
+        Regional: regional,
+        Conjunto: conjunto,
+        Observacao: obs,
+        StaCalc: staCalc,
+        TipoOcorrencia: 'INDIVIDUAL',
+        Equipe: equipe,
+        TmaTmae: tma,
+        MultaOs: null
+      });
+    }
+
+    return { individualRows, byOcorrencia };
+  }
+
+  // ---------- Parsing da Compensação (.xlsx via SheetJS) ----------
+  function parseComp(arrayBuffer){
+    if(typeof XLSX === 'undefined'){
+      throw new Error('Biblioteca de Excel não carregou (verifique sua conexão com a internet).');
+    }
+    const data = new Uint8Array(arrayBuffer);
+    const wb = XLSX.read(data, {type:'array', cellDates:true});
+    const sheetName = wb.SheetNames.find(n => /ocorr/i.test(n)) || wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(ws, {defval:null, raw:true});
+    const byOcorrencia = new Map();
+
+    function findKey(rowObj, target){
+      const keys = Object.keys(rowObj);
+      if(keys.indexOf(target) !== -1) return target;
+      const targetUp = target.trim().toUpperCase();
+      return keys.find(k => k.trim().toUpperCase() === targetUp);
+    }
+
+    let warned = false;
+    json.forEach(row => {
+      const numKey = findKey(row, 'NUM_SEQ_OPER_INIC_INTER_VDI');
+      const multaKey = findKey(row, 'MULTA_OS');
+      if(!numKey){
+        if(!warned){ console.warn('[Compensação] Coluna NUM_SEQ_OPER_INIC_INTER_VDI não encontrada. Colunas disponíveis:', Object.keys(row)); warned = true; }
+        return;
+      }
+      if(!multaKey && !warned){ console.warn('[Compensação] Coluna MULTA_OS não encontrada. Colunas disponíveis:', Object.keys(row)); warned = true; }
+      const rawNum = row[numKey];
+      if(rawNum === null || rawNum === undefined || rawNum === '') return;
+      const numVal = Number(rawNum);
+      const num = (!isNaN(numVal) && isFinite(numVal)) ? String(Math.trunc(numVal)) : String(rawNum).trim();
+      const multaRaw = multaKey ? row[multaKey] : null;
+      const multaNum = Number(multaRaw);
+      const qtdKey = findKey(row, 'QTD_UCS');
+      const decKey = findKey(row, 'DEC');
+      const elemKey = findKey(row, 'ELEMENTO');
+      const tipoKey = findKey(row, 'TIPO');
+      const causaKey = findKey(row, 'CAUSA');
+      const subCausaKey = findKey(row, 'SUB_CAUSA');
+      const zonaKey = findKey(row, 'COD_TIPO_LOC_INS');
+      byOcorrencia.set(num, {
+        MultaOs: isNaN(multaNum) ? 0 : multaNum,
+        QtdUcs: qtdKey ? row[qtdKey] : null,
+        Dec: decKey ? row[decKey] : null,
+        Elemento: elemKey ? row[elemKey] : null,
+        Tipo: tipoKey ? row[tipoKey] : null,
+        Causa: causaKey ? row[causaKey] : null,
+        SubCausa: subCausaKey ? row[subCausaKey] : null,
+        Zona: zonaKey ? row[zonaKey] : null
+      });
+    });
+    return { byOcorrencia, rawCount: json.length };
+  }
+
+  // ---------- Unifica Crítica (coletiva) + TMAE (individual), enriquecendo com TMAE/Compensação ----------
+  function rebuildUnifiedRows(){
+    const tmaeMap = state.tmaeByOcorrencia;
+    const compMap = state.compByOcorrencia;
+
+    const critEnriched = state.criticaRawRows.map(r => {
+      const tmaeMatches = tmaeMap.get(r.OcorrenciaNum);
+      const tmaeRow = tmaeMatches && tmaeMatches.length ? tmaeMatches[0] : null;
+      const compRow = compMap.get(r.OcorrenciaNum);
+      return Object.assign({}, r, {
+        Equipe: tmaeRow ? tmaeRow.Equipe : extractEquipe(r.Observacao),
+        TmaTmae: tmaeRow ? tmaeRow.TMA : null,
+        MultaOs: compRow ? compRow.MultaOs : null
+      });
+    });
+
+    const indivEnriched = state.tmaeIndividualRows.map(r => {
+      const compRow = compMap.get(r.OcorrenciaNum);
+      return Object.assign({}, r, {
+        MultaOs: compRow ? compRow.MultaOs : null
+      });
+    });
+
+    state.rows = critEnriched.concat(indivEnriched);
+    state.totalRaw = state.rows.length;
   }
 
   // ---------- Filtering ----------
@@ -831,16 +1162,19 @@
 
     if(cfg.applyRelevance){
       rows = rows.filter(r => {
+        if(r.TipoOcorrencia === 'INDIVIDUAL') return cfg.includeIndividual;
         const hitIdec = r.IdecEto >= cfg.cutIdec;
         const hitIfec = r.IfecEto >= cfg.cutIfec;
         const hitDur  = r.Duracao >= cfg.cutDur;
         if(cfg.mode === 'OR') return hitIdec || hitIfec || hitDur;
         return hitIdec && hitIfec && hitDur;
       });
+    } else if(!cfg.includeIndividual){
+      rows = rows.filter(r => r.TipoOcorrencia !== 'INDIVIDUAL');
     }
 
-    if(cfg.minClientes !== null && !isNaN(cfg.minClientes)) rows = rows.filter(r => r.Clientes >= cfg.minClientes);
-    if(cfg.minDuracao !== null && !isNaN(cfg.minDuracao)) rows = rows.filter(r => r.Duracao >= cfg.minDuracao);
+    if(cfg.minClientes !== null && !isNaN(cfg.minClientes)) rows = rows.filter(r => r.TipoOcorrencia === 'INDIVIDUAL' || r.Clientes >= cfg.minClientes);
+    if(cfg.minDuracao !== null && !isNaN(cfg.minDuracao)) rows = rows.filter(r => r.TipoOcorrencia === 'INDIVIDUAL' || r.Duracao >= cfg.minDuracao);
     if(cfg.diaMin !== null && !isNaN(cfg.diaMin)) rows = rows.filter(r => r.Dia !== null && r.Dia >= cfg.diaMin);
     if(cfg.diaMax !== null && !isNaN(cfg.diaMax)) rows = rows.filter(r => r.Dia !== null && r.Dia <= cfg.diaMax);
 
@@ -882,6 +1216,7 @@
     {key:'Dia', label:'Dia', type:'num', width:50},
     {key:'Mes', label:'Mês', type:'num', width:50},
     {key:'Hora', label:'Hora', type:'mono', width:60},
+    {key:'TipoOcorrencia', label:'Tipo', type:'tipo', width:90},
     {key:'Duracao', label:'Duração (min)', type:'num', width:90},
     {key:'Clientes', label:'Clientes', type:'num', width:90},
     {key:'IdecEto', label:'IDEC ETO', type:'dec', width:100},
@@ -892,6 +1227,9 @@
     {key:'Polo', label:'Polo', type:'text', width:110},
     {key:'Regional', label:'Regional', type:'text', width:100},
     {key:'Conjunto', label:'Conjunto', type:'text', width:140},
+    {key:'Equipe', label:'Equipe', type:'mono', width:80},
+    {key:'TmaTmae', label:'TMA (TMAE, min)', type:'num', width:110},
+    {key:'MultaOs', label:'Compensação (R$)', type:'money', width:130},
     {key:'Observacao', label:'Observação', type:'obs', width:340},
   ];
   COLS.forEach(c => { cfg.visibleCols[c.key] = true; });
@@ -902,6 +1240,9 @@
     return (v || 0).toFixed(casas).replace('.', ',');
   }
   function fmtInt(v){ return v.toLocaleString('pt-BR'); }
+  function fmtMoney(v){
+    return (Number(v)||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
   function escapeHtml(s){
     return String(s == null ? '' : s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -958,6 +1299,14 @@
         } else if(c.type === 'dec'){
           td.className = 'num mono';
           td.textContent = fmtDec(val, 6);
+        } else if(c.type === 'money'){
+          td.className = 'num mono';
+          td.textContent = (val === null || val === undefined || val === '') ? '—' : fmtMoney(val);
+        } else if(c.type === 'tipo'){
+          td.className = 'tag-cell';
+          td.innerHTML = (val === 'INDIVIDUAL')
+            ? '<span class="tag reinc">INDIVIDUAL</span>'
+            : '<span class="tag idec">COLETIVA</span>';
         } else if(c.type === 'mono'){
           td.className = 'mono';
           td.textContent = val || '';
@@ -982,13 +1331,26 @@
     const totalDurH = rows.reduce((s,r)=>s+r.Duracao,0)/60;
     const totalIdec = rows.reduce((s,r)=>s+r.IdecEto,0);
     const totalIfec = rows.reduce((s,r)=>s+r.IfecEto,0);
+    // Compensação é um valor por OCORRÊNCIA, não por linha — uma ocorrência com várias localidades
+    // gera várias linhas repetindo o mesmo valor. Soma só 1x por número de ocorrência único.
+    const multaSeen = new Set();
+    let totalMulta = 0;
+    rows.forEach(r => {
+      if(r.MultaOs === null || r.MultaOs === undefined) return;
+      const key = r.OcorrenciaNum || ('__semnum_'+Math.random());
+      if(multaSeen.has(key)) return;
+      multaSeen.add(key);
+      totalMulta += r.MultaOs;
+    });
+    const totalIndividual = rows.filter(r=>r.TipoOcorrencia==='INDIVIDUAL').length;
 
     document.getElementById('kpiTotal').textContent = fmtInt(rows.length);
-    document.getElementById('kpiTotalSub').textContent = 'de ' + fmtInt(state.totalAfterCritical) + ' (após excluir dia crítico)';
+    document.getElementById('kpiTotalSub').textContent = 'de ' + fmtInt(state.totalAfterCritical) + ' (após excluir dia crítico) · ' + fmtInt(totalIndividual) + ' individuais';
     document.getElementById('kpiClientes').textContent = fmtInt(totalClientes);
     document.getElementById('kpiDuracao').textContent = totalDurH.toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'h';
     document.getElementById('kpiIdec').textContent = fmtDec(totalIdec, 6);
     document.getElementById('kpiIfec').textContent = fmtDec(totalIfec, 6);
+    document.getElementById('kpiMulta').textContent = 'R$ ' + fmtMoney(totalMulta);
     document.getElementById('rowCount').textContent = fmtInt(rows.length);
   }
 
@@ -1009,13 +1371,16 @@
       Dia: first.Dia,
       Mes: first.Mes,
       Hora: first.Hora,
+      TipoOcorrencia: first.TipoOcorrencia,
       Duracao: Math.max(...rs.map(r=>r.Duracao)),          // mesmo evento: duração = a maior registrada entre as linhas
       Clientes: rs.reduce((s,r)=>s+r.Clientes,0),           // localidades diferentes: clientes somam (impacto real do evento)
       CausaSubcausa: first.CausaSubcausa,
       CausaPrincipal: first.CausaPrincipal,
       Subcausa: first.Subcausa,
       Observacao: first.Observacao,
-      Equipe: extractEquipe(first.Observacao),
+      Equipe: first.Equipe || '',
+      TmaTmae: (first.TmaTmae === null || first.TmaTmae === undefined) ? null : first.TmaTmae,
+      MultaOs: (first.MultaOs === null || first.MultaOs === undefined) ? null : first.MultaOs,
       Localidade: first.Localidade,
       Polo: first.Polo,
       IdecEto: rs.reduce((s,r)=>s+r.IdecEto,0),
@@ -1068,6 +1433,10 @@
       const causaCounts = {};
       rs.forEach(r => { causaCounts[r.CausaPrincipal||'—'] = (causaCounts[r.CausaPrincipal||'—']||0)+1; });
       const causaTop = Object.entries(causaCounts).sort((a,b)=>b[1]-a[1])[0];
+      const tmaValues = rs.map(r=>r.TmaTmae).filter(v => v !== null && v !== undefined);
+      const multaValues = rs.map(r=>r.MultaOs).filter(v => v !== null && v !== undefined);
+      const coletivaCount = rs.filter(r=>r.TipoOcorrencia==='COLETIVA').length;
+      const individualCount = rs.filter(r=>r.TipoOcorrencia==='INDIVIDUAL').length;
       return {
         cod,
         count: rs.length,
@@ -1077,11 +1446,17 @@
         regionais: Array.from(new Set(rawRows.map(r=>r.Regional).filter(Boolean))),
         polos: Array.from(new Set(rawRows.map(r=>r.Polo).filter(Boolean))),
         zonas: Array.from(new Set(rawRows.map(r=>r.Zona).filter(Boolean))),
+        abrangencias: Array.from(new Set(rawRows.map(r=>r.Abrangencia).filter(Boolean))),
         causaPrincipal: causaTop ? causaTop[0] : '—',
         duracaoTotal: rs.reduce((s,r)=>s+r.Duracao,0),
         clientesTotal: rs.reduce((s,r)=>s+r.Clientes,0),
         idecTotal: rs.reduce((s,r)=>s+r.IdecEto,0),
         ifecTotal: rs.reduce((s,r)=>s+r.IfecEto,0),
+        tmaMedio: tmaValues.length ? (tmaValues.reduce((a,b)=>a+b,0)/tmaValues.length) : null,
+        multaTotal: multaValues.reduce((a,b)=>a+b,0),
+        temMulta: multaValues.length > 0,
+        coletivaCount,
+        individualCount,
       };
     });
 
@@ -1128,18 +1503,23 @@
 
   // ---------- Página de Reincidências (análise aprofundada) ----------
   const RECID_COLS = [
-    {key:'cod', label:'Elemento interrompido', type:'mono'},
-    {key:'count', label:'Ocorrências', type:'num'},
-    {key:'diaMin', label:'1ª ocorr. (dia)', type:'num'},
-    {key:'diaMax', label:'Última ocorr. (dia)', type:'num'},
-    {key:'causaPrincipal', label:'Causa mais frequente', type:'text'},
+    {key:'cod', label:'Elemento interrompido', type:'mono', center:true},
     {key:'zonas', label:'Zona', type:'list'},
+    {key:'abrangencias', label:'Abrangência', type:'list'},
+    {key:'count', label:'Ocorrências', type:'num', center:true},
+    {key:'coletivaCount', label:'Coletivas', type:'num', center:true},
+    {key:'individualCount', label:'Individuais', type:'num', center:true},
+    {key:'diaMin', label:'1ª ocorr. (dia)', type:'num', center:true},
+    {key:'diaMax', label:'Última ocorr. (dia)', type:'num', center:true},
+    {key:'causaPrincipal', label:'Causa mais frequente', type:'text'},
     {key:'regionais', label:'Regional(is)', type:'list'},
     {key:'polos', label:'Polo(s)', type:'list'},
-    {key:'duracaoTotal', label:'Duração total (min)', type:'num'},
-    {key:'clientesTotal', label:'Clientes total', type:'num'},
-    {key:'idecTotal', label:'IDEC ETO total', type:'dec'},
-    {key:'ifecTotal', label:'IFEC ETO total', type:'dec'},
+    {key:'duracaoTotal', label:'Duração total (min)', type:'num', center:true},
+    {key:'clientesTotal', label:'Clientes total', type:'num', center:true},
+    {key:'tmaMedio', label:'TMA médio TMAE (min)', type:'num', center:true},
+    {key:'multaTotal', label:'Compensação total (R$)', type:'money', center:true},
+    {key:'idecTotal', label:'IDEC ETO total', type:'dec', center:true},
+    {key:'ifecTotal', label:'IFEC ETO total', type:'dec', center:true},
   ];
   let recidSortKey = 'count', recidSortDir = 'desc';
   let recidExpanded = null; // cod do elemento expandido no momento
@@ -1175,6 +1555,12 @@
     document.getElementById('rkClientes').textContent = fmtInt(totalClientes);
     document.getElementById('rkDuracao').textContent = totalDurH.toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'h';
 
+    const tmaValues = data.recorrentes.map(e=>e.tmaMedio).filter(v => v !== null && v !== undefined);
+    const tmaGeral = tmaValues.length ? (tmaValues.reduce((a,b)=>a+b,0)/tmaValues.length) : null;
+    document.getElementById('rkTma').textContent = (tmaGeral === null) ? '—' : (fmtInt(Math.round(tmaGeral)) + ' min');
+    const totalMulta = data.recorrentes.reduce((s,e)=>s+(e.multaTotal||0),0);
+    document.getElementById('rkMulta').textContent = 'R$ ' + fmtMoney(totalMulta);
+
     const barsEl = document.getElementById('barsContainer');
     barsEl.innerHTML = '';
     const top15 = data.recorrentes.slice(0,15);
@@ -1196,6 +1582,7 @@
       let arrow = '';
       if(recidSortKey === c.key) arrow = recidSortDir === 'asc' ? ' ▲' : ' ▼';
       th.innerHTML = c.label + (arrow ? '<span class="arrow">'+arrow+'</span>' : '');
+      if(c.center) th.style.textAlign = 'center';
       th.addEventListener('click', () => {
         if(recidSortKey === c.key){ recidSortDir = recidSortDir === 'asc' ? 'desc' : 'asc'; }
         else { recidSortKey = c.key; recidSortDir = 'desc'; }
@@ -1226,11 +1613,13 @@
       RECID_COLS.forEach(c => {
         const td = document.createElement('td');
         const val = e[c.key];
-        if(c.type === 'num'){ td.className = 'num'; td.textContent = fmtInt(val); }
+        if(c.type === 'num'){ td.className = 'num'; td.textContent = (val === null || val === undefined) ? '—' : fmtInt(Math.round(val)); }
         else if(c.type === 'dec'){ td.className = 'num mono'; td.textContent = fmtDec(val, 6); }
+        else if(c.type === 'money'){ td.className = 'num mono'; td.textContent = (val === null || val === undefined) ? '—' : ('R$ ' + fmtMoney(val)); }
         else if(c.type === 'mono'){ td.className = 'mono'; td.textContent = val; }
         else if(c.type === 'list'){ td.textContent = val.join(', ') || '—'; }
         else { td.textContent = val || '—'; }
+        if(c.center) td.style.textAlign = 'center';
         tr.appendChild(td);
       });
       tr.addEventListener('click', () => {
@@ -1247,7 +1636,7 @@
         const inner = document.createElement('div');
         inner.className = 'detail-inner';
         const dt = document.createElement('table');
-        dt.innerHTML = '<thead><tr><th>Tipo</th><th>Nº Ocorrência</th><th>Dia</th><th>Zona</th><th>Intervalo desde a origem (dias)</th><th>Duração (min)</th><th>Causa/Subcausa</th><th>Clientes</th><th>Observação</th></tr></thead>';
+        dt.innerHTML = '<thead><tr><th>Tipo</th><th>Nº Ocorrência</th><th>Dia</th><th>Zona</th><th>Intervalo desde a origem (dias)</th><th>Duração (min)</th><th>Causa/Subcausa</th><th>Clientes</th><th>Equipe</th><th>TMA TMAE (min)</th><th>Compensação (R$)</th><th>Observação</th></tr></thead>';
         const dtbody = document.createElement('tbody');
         const origemDia = e.rows.length ? e.rows[0].Dia : null;
         e.rows.forEach((r, idx) => {
@@ -1257,11 +1646,16 @@
           const locInfo = (r.Localidades && r.Localidades.length > 1) ? ('\n\nLocalidades atingidas neste evento: ' + r.Localidades.join(', ')) : '';
           const obsTooltip = obsFull + locInfo;
           const isOrigem = (idx === 0);
-          const tipoTag = isOrigem
+          const origemTag = isOrigem
             ? '<span class="tag origem">ORIGEM</span>'
             : '<span class="tag reinc">REINCIDÊNCIA '+idx+'</span>';
+          const tipoOcTag = (r.TipoOcorrencia === 'INDIVIDUAL')
+            ? '<span class="tag reinc" style="background:rgba(248,113,113,0.12);">INDIVIDUAL</span>'
+            : '<span class="tag idec">COLETIVA</span>';
           const intervalo = (!isOrigem && r.Dia !== null && origemDia !== null) ? (r.Dia - origemDia) : '—';
-          rtr.innerHTML = '<td class="tag-cell">'+tipoTag+'</td>'+
+          const tmaTxt = (r.TmaTmae === null || r.TmaTmae === undefined) ? '—' : fmtInt(r.TmaTmae);
+          const multaTxt = (r.MultaOs === null || r.MultaOs === undefined) ? '—' : ('R$ ' + fmtMoney(r.MultaOs));
+          rtr.innerHTML = '<td class="tag-cell">'+origemTag+' '+tipoOcTag+'</td>'+
             '<td class="mono">'+escapeHtml(r.OcorrenciaNum || '—')+'</td>'+
             '<td class="num">'+r.Dia+'</td>'+
             '<td class="mono">'+escapeHtml((r.Zonas||[]).join('/') || '—')+'</td>'+
@@ -1269,6 +1663,9 @@
             '<td class="num">'+fmtInt(r.Duracao)+'</td>'+
             '<td>'+escapeHtml(r.CausaSubcausa||'')+'</td>'+
             '<td class="num">'+fmtInt(r.Clientes)+'</td>'+
+            '<td class="mono">'+escapeHtml(r.Equipe || '—')+'</td>'+
+            '<td class="num">'+tmaTxt+'</td>'+
+            '<td class="num mono">'+multaTxt+'</td>'+
             '<td class="obs" title="'+escapeHtml(obsTooltip)+'">'+escapeHtml(obsResumo)+(r._subRowCount>1?' <span class="tag reinc" style="background:rgba(34,211,238,0.12);color:var(--cyan);">'+r._subRowCount+' localidades</span>':'')+'</td>';
           dtbody.appendChild(rtr);
         });
@@ -1490,6 +1887,7 @@
     const rows = state.filtered.map(r => cols.map(c => {
       const val = r[c.key];
       if(c.type === 'dec') return Number((val||0).toFixed(6));
+      if(c.type === 'money') return (val === null || val === undefined) ? '' : Number(Number(val).toFixed(2));
       return (val === null || val === undefined) ? '' : val;
     }));
     exportSheetsToExcel([{name:'Ocorrencias', rows:[header, ...rows]}], 'ocorrencias_'+stampNow()+'.xlsx');
@@ -1508,7 +1906,7 @@
       const occ = e.rows; // já ordenado cronologicamente (mergeOccurrenceGroup + dedupeOccurrences)
       const last = occ[occ.length-1];
       const ultOcorrStr = (last.Ano && last.Mes && last.Dia)
-        ? (String(last.Ano) + '-' + String(last.Mes).padStart(2,'0') + '-' + String(last.Dia).padStart(2,'0'))
+        ? (String(last.Dia).padStart(2,'0') + '/' + String(last.Mes).padStart(2,'0') + '/' + String(last.Ano))
         : '';
       const reinc7d = occ.filter(r => {
         const diff = daysBetween(r, last);
@@ -1541,11 +1939,12 @@
     const sumRows = data.recorrentes.map(e => RECID_COLS.map(c => {
       const val = e[c.key];
       if(c.type === 'dec') return Number((val||0).toFixed(6));
+      if(c.type === 'money') return Number((val||0).toFixed(2));
       if(Array.isArray(val)) return val.join(', ');
       return (val === null || val === undefined) ? '' : val;
     }));
 
-    const detHeader = ['Elemento interrompido','Tipo','Nº Ocorrência','Dia','Zona','Intervalo desde a origem (dias)','Duração (min)','Causa/Subcausa','Clientes','Localidades atingidas','Observação'];
+    const detHeader = ['Elemento interrompido','Tipo (Origem/Reincidência)','Tipo de ocorrência','Nº Ocorrência','Dia','Zona','Intervalo desde a origem (dias)','Duração (min)','Causa/Subcausa','Clientes','Equipe','TMA TMAE (min)','Compensação (R$)','Localidades atingidas','Observação'];
     const detRows = [];
     data.recorrentes.forEach(e => {
       const origemDia = e.rows.length ? e.rows[0].Dia : null;
@@ -1555,6 +1954,7 @@
         detRows.push([
           e.cod,
           isOrigem ? 'ORIGEM' : ('REINCIDÊNCIA ' + idx),
+          r.TipoOcorrencia || '',
           r.OcorrenciaNum || '',
           r.Dia,
           (r.Zonas||[]).join('/'),
@@ -1562,6 +1962,9 @@
           r.Duracao,
           r.CausaSubcausa || '',
           r.Clientes,
+          r.Equipe || '',
+          (r.TmaTmae === null || r.TmaTmae === undefined) ? '' : r.TmaTmae,
+          (r.MultaOs === null || r.MultaOs === undefined) ? '' : Number(r.MultaOs.toFixed(2)),
           (r.Localidades||[]).join(', '),
           r.Observacao || ''
         ]);
@@ -1574,37 +1977,138 @@
     ], 'reincidencias_'+stampNow()+'.xlsx');
   });
 
-  // ---------- File handling ----------
-  document.getElementById('fileInput').addEventListener('change', function(e){
+  // ---------- Import modal: status helpers ----------
+  function setImportStatus(cardId, statusId, state_, text){
+    const card = document.getElementById(cardId);
+    const statusEl = document.getElementById(statusId);
+    card.classList.remove('loading','success','error');
+    if(state_) card.classList.add(state_);
+    statusEl.querySelector('.txt').textContent = text;
+  }
+
+  function updateImportSummary(){
+    const parts = [];
+    if(state.criticaRawRows.length) parts.push('Crítica ✓');
+    if(state.tmaeLoaded) parts.push('TMAE ✓');
+    if(state.compLoaded) parts.push('Comp. ✓');
+    document.getElementById('importSummaryLabel').textContent = parts.length ? parts.join(' · ') : 'Importar dados';
+  }
+
+  function getMaxDiaLoaded(){
+    let maxDia = -Infinity;
+    state.rows.forEach(r => { if(r.Dia !== null && r.Dia > maxDia) maxDia = r.Dia; });
+    return isFinite(maxDia) ? maxDia : null;
+  }
+
+  function applySmartDayDefaults(){
+    const maxDia = getMaxDiaLoaded();
+    if(maxDia === null) return;
+    state.selected.dias = new Set([Math.max(1, maxDia - 1)]);
+    const diasRecidSet = new Set();
+    for(let d = Math.max(1, maxDia - 6); d <= maxDia; d++) diasRecidSet.add(d);
+    state.selected.diasRecid = diasRecidSet;
+  }
+
+  function afterAnySourceLoaded(){
+    rebuildUnifiedRows();
+    if(state.criticaRawRows.length){
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('openConfigBtn').disabled = false;
+      if(!state.dayDefaultsApplied){
+        applySmartDayDefaults();
+        state.dayDefaultsApplied = true;
+      }
+      populateFilterLists();
+      renderDayPills();
+      renderDayPillsRecid();
+      refresh();
+    }
+    updateImportSummary();
+  }
+
+  // ---------- Import: Crítica (.txt) ----------
+  document.getElementById('fileInputCritica').addEventListener('change', function(e){
     const file = e.target.files[0];
     if(!file) return;
-    document.getElementById('uploadLabel').textContent = file.name;
+    setImportStatus('importCardCritica','statusCritica','loading', 'Lendo ' + file.name + '...');
     const reader = new FileReader();
     reader.onload = function(ev){
       let text;
-      try{
-        const decoder = new TextDecoder('windows-1252');
-        text = decoder.decode(ev.target.result);
-      }catch(err){
-        text = new TextDecoder('utf-8').decode(ev.target.result);
-      }
+      try{ text = new TextDecoder('windows-1252').decode(ev.target.result); }
+      catch(err){ text = new TextDecoder('utf-8').decode(ev.target.result); }
       try{
         const rows = parseFile(text);
-        state.rows = rows;
-        state.totalRaw = rows.length;
-        document.getElementById('emptyState').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-        document.getElementById('openConfigBtn').disabled = false;
-        populateFilterLists();
-        renderDayPills();
-        renderDayPillsRecid();
-        refresh();
+        state.criticaRawRows = rows;
+        setImportStatus('importCardCritica','statusCritica','success', '✓ ' + fmtInt(rows.length) + ' ocorrências importadas (' + file.name + ')');
+        afterAnySourceLoaded();
       }catch(err){
-        alert('Não foi possível ler o arquivo: ' + err.message);
+        setImportStatus('importCardCritica','statusCritica','error', '✗ Erro: ' + err.message);
       }
     };
+    reader.onerror = function(){ setImportStatus('importCardCritica','statusCritica','error', '✗ Falha ao ler o arquivo.'); };
     reader.readAsArrayBuffer(file);
   });
+
+  // ---------- Import: TMAE (.txt) ----------
+  document.getElementById('fileInputTmae').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    setImportStatus('importCardTmae','statusTmae','loading', 'Lendo ' + file.name + '...');
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      let text;
+      try{ text = new TextDecoder('windows-1252').decode(ev.target.result); }
+      catch(err){ text = new TextDecoder('utf-8').decode(ev.target.result); }
+      try{
+        const { individualRows, byOcorrencia } = parseTMAE(text);
+        state.tmaeIndividualRows = individualRows;
+        state.tmaeByOcorrencia = byOcorrencia;
+        state.tmaeLoaded = true;
+        const coletivaCount = Array.from(byOcorrencia.values()).length;
+        setImportStatus('importCardTmae','statusTmae','success',
+          '✓ ' + fmtInt(individualRows.length) + ' individuais + ' + fmtInt(coletivaCount) + ' coletivas vinculadas (' + file.name + ')');
+        afterAnySourceLoaded();
+      }catch(err){
+        setImportStatus('importCardTmae','statusTmae','error', '✗ Erro: ' + err.message);
+      }
+    };
+    reader.onerror = function(){ setImportStatus('importCardTmae','statusTmae','error', '✗ Falha ao ler o arquivo.'); };
+    reader.readAsArrayBuffer(file);
+  });
+
+  // ---------- Import: Compensação (.xlsx) ----------
+  document.getElementById('fileInputComp').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    setImportStatus('importCardComp','statusComp','loading', 'Lendo ' + file.name + '...');
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        const { byOcorrencia, rawCount } = parseComp(ev.target.result);
+        state.compByOcorrencia = byOcorrencia;
+        state.compLoaded = true;
+        setImportStatus('importCardComp','statusComp','success', '✓ ' + fmtInt(rawCount) + ' registros de compensação importados (' + file.name + ')');
+        afterAnySourceLoaded();
+      }catch(err){
+        setImportStatus('importCardComp','statusComp','error', '✗ Erro: ' + err.message);
+      }
+    };
+    reader.onerror = function(){ setImportStatus('importCardComp','statusComp','error', '✗ Falha ao ler o arquivo.'); };
+    reader.readAsArrayBuffer(file);
+  });
+
+  // ---------- Import modal: abrir/fechar ----------
+  const importOverlay = document.getElementById('importOverlay');
+  function openImportModal(){ importOverlay.classList.add('open'); }
+  function closeImportModal(){ importOverlay.classList.remove('open'); }
+  document.getElementById('openImportBtn').addEventListener('click', openImportModal);
+  document.getElementById('openImportBtnEmpty').addEventListener('click', openImportModal);
+  document.getElementById('closeImportBtn').addEventListener('click', closeImportModal);
+  document.getElementById('closeImportBtnFoot').addEventListener('click', closeImportModal);
+  importOverlay.addEventListener('click', (e) => { if(e.target === importOverlay) closeImportModal(); });
+  // Abre automaticamente ao carregar a página, já que nada foi importado ainda
+  openImportModal();
 
   // ---------- Search ----------
   document.getElementById('searchInput').addEventListener('input', () => refresh());
@@ -1634,6 +2138,7 @@
     cfg.cutDur = parseFloat(document.getElementById('cutDur').value) || 0;
     cfg.excludeCritical = document.getElementById('excludeCritical').checked;
     cfg.applyRelevance = document.getElementById('applyRelevance').checked;
+    cfg.includeIndividual = document.getElementById('includeIndividual').checked;
     const mc = document.getElementById('minClientes').value;
     const md = document.getElementById('minDuracao').value;
     const dmin = document.getElementById('diaMin').value;
@@ -1656,9 +2161,10 @@
     document.getElementById('cutIfec').value = 0.00026;
     document.getElementById('cutDur').value = 1340;
     document.getElementById('excludeCritical').checked = true;
-    document.getElementById('applyRelevance').checked = true;
-    document.getElementById('minClientes').value = '';
-    document.getElementById('minDuracao').value = '';
+    document.getElementById('applyRelevance').checked = false;
+    document.getElementById('includeIndividual').checked = true;
+    document.getElementById('minClientes').value = 100;
+    document.getElementById('minDuracao').value = 180;
     document.getElementById('diaMin').value = '';
     document.getElementById('diaMax').value = '';
     document.getElementById('cutRecid').value = 2;
@@ -1668,8 +2174,7 @@
     state.selected.regional.clear();
     state.selected.polo.clear();
     state.selected.causa.clear();
-    state.selected.dias.clear();
-    state.selected.diasRecid.clear();
+    applySmartDayDefaults();
     state.selected.zonaRecid = new Set(['UB','RR']);
     renderZonaPills();
     COLS.forEach(c => cfg.visibleCols[c.key] = true);
@@ -1689,6 +2194,7 @@
   });
   document.getElementById('excludeCritical').addEventListener('change', () => { readInputsIntoCfg(); refresh(); });
   document.getElementById('applyRelevance').addEventListener('change', () => { readInputsIntoCfg(); refresh(); });
+  document.getElementById('includeIndividual').addEventListener('change', () => { readInputsIntoCfg(); refresh(); });
 
 })();
 </script>
