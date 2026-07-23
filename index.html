@@ -446,7 +446,7 @@
       </svg>
     </div>
     <div class="nav-tabs">
-      <button class="nav-tab active" id="tabPainel" data-view="dashboard">Painel</button>
+      <button class="nav-tab active" id="tabPainel" data-view="dashboard">Ocorrências Relevantes</button>
       <button class="nav-tab" id="tabRecid" data-view="viewRecid">Reincidências</button>
     </div>
   </div>
@@ -1213,6 +1213,7 @@
 
   // ---------- Rendering ----------
   const COLS = [
+    {key:'OcorrenciaNum', label:'Nº Ocorrência', type:'mono', width:110},
     {key:'Dia', label:'Dia', type:'num', width:50},
     {key:'Mes', label:'Mês', type:'num', width:50},
     {key:'Hora', label:'Hora', type:'mono', width:60},
@@ -1223,6 +1224,7 @@
     {key:'IfecEto', label:'IFEC ETO', type:'dec', width:100},
     {key:'CausaSubcausa', label:'Causa / Subcausa', type:'text', width:260},
     {key:'ElementoAlimentador', label:'Elemento / Alimentador', type:'text', width:240},
+    {key:'Zona', label:'Zona', type:'mono', width:70},
     {key:'Localidade', label:'Localidade', type:'text', width:150},
     {key:'Polo', label:'Polo', type:'text', width:110},
     {key:'Regional', label:'Regional', type:'text', width:100},
