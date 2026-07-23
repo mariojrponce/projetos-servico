@@ -530,6 +530,45 @@
   </div>
 </div>
 
+<!-- ============ Modal de Filtros Avançados — Ocorrências Relevantes ============ -->
+<div class="modal-overlay" id="facetOverlayPainel">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h2>Filtros avançados por coluna</h2>
+        <p>Selecione um ou mais valores em cada coluna. Sem nada marcado numa coluna, ela não filtra (mostra tudo).</p>
+      </div>
+      <button class="modal-close" id="closeFacetBtnPainel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="facetBodyPainel"></div>
+    <div class="modal-foot">
+      <button class="btn" id="clearFacetBtnPainel">Limpar filtros</button>
+      <button class="btn primary" id="applyFacetBtnPainel">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal de Filtros Avançados — Reincidência ============ -->
+<div class="modal-overlay" id="facetOverlayRecid">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h2>Filtros avançados por coluna</h2>
+        <p>Selecione um ou mais valores em cada coluna. Sem nada marcado numa coluna, ela não filtra (mostra tudo).</p>
+      </div>
+      <button class="modal-close" id="closeFacetBtnRecid">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="facetBodyRecid"></div>
+    <div class="modal-foot">
+      <button class="btn" id="clearFacetBtnRecid">Limpar filtros</button>
+      <button class="btn primary" id="applyFacetBtnRecid">Aplicar</button>
+    </div>
+  </div>
+</div>
 
 <div class="shell">
 
@@ -612,7 +651,12 @@
     <div class="toolbar">
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input type="text" id="searchInput" placeholder="Buscar por nº ocorrência, causa, elemento, zona, localidade, polo, regional, equipe, dia crítico...">      </div>
+        <input type="text" id="searchInput" placeholder="Buscar por nº ocorrência, causa, elemento, zona, localidade, polo, regional, equipe, dia crítico...">
+      </div>
+      <button class="btn icon-btn" id="openFacetBtnPainel" title="Filtros avançados por coluna">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+        <span id="facetCountPainel" class="badge-count" style="display:none;">0</span>
+      </button>
       <div class="count-pill"><b id="rowCount">0</b>&nbsp;ocorrências exibidas</div>
       <button class="btn download" id="downloadBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
@@ -695,6 +739,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="text" id="searchInputRecid" placeholder="Buscar por elemento, ocorrência, zona, abrangência, causa, regional, polo, equipe...">
       </div>
+      <button class="btn icon-btn" id="openFacetBtnRecid" title="Filtros avançados por coluna">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+        <span id="facetCountRecid" class="badge-count" style="display:none;">0</span>
+      </button>
       <button class="btn download" id="downloadElementPatternBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
         Baixar Excel (padrão Elemento/UCs/Reinc. 7D)
@@ -862,7 +910,15 @@
     filtered: [],
     sortKey: 'Dia',
     sortDir: 'desc',
-    selected: { regional: new Set(), polo: new Set(), causa: new Set(), dias: new Set(), diasRecid: new Set(), zonaRecid: new Set(['UB','RR']) }
+    selected: {
+      regional: new Set(), polo: new Set(), causa: new Set(), dias: new Set(), diasRecid: new Set(), zonaRecid: new Set(['UB','RR']),
+      // facetas extras do Painel
+      tipoFacet: new Set(), zonaFacetPainel: new Set(), localidadeFacet: new Set(), conjuntoFacet: new Set(),
+      equipeFacet: new Set(), elementoFacetPainel: new Set(), abrangenciaFacetPainel: new Set(),
+      // facetas extras da Reincidência
+      abrangenciaFacetRecid: new Set(), causaFacetRecid: new Set(), regionalFacetRecid: new Set(),
+      poloFacetRecid: new Set(), equipeFacetRecid: new Set()
+    }
   };
 
   const cfg = {
@@ -1184,6 +1240,13 @@
     if(state.selected.polo.size) rows = rows.filter(r => state.selected.polo.has(r.Polo));
     if(state.selected.causa.size) rows = rows.filter(r => state.selected.causa.has(r.CausaPrincipal));
     if(state.selected.dias.size) rows = rows.filter(r => r.Dia !== null && state.selected.dias.has(r.Dia));
+    if(state.selected.tipoFacet.size) rows = rows.filter(r => state.selected.tipoFacet.has(r.TipoOcorrencia));
+    if(state.selected.zonaFacetPainel.size) rows = rows.filter(r => state.selected.zonaFacetPainel.has(r.Zona));
+    if(state.selected.localidadeFacet.size) rows = rows.filter(r => state.selected.localidadeFacet.has(r.Localidade));
+    if(state.selected.conjuntoFacet.size) rows = rows.filter(r => state.selected.conjuntoFacet.has(r.Conjunto));
+    if(state.selected.equipeFacet.size) rows = rows.filter(r => state.selected.equipeFacet.has(r.Equipe));
+    if(state.selected.elementoFacetPainel.size) rows = rows.filter(r => state.selected.elementoFacetPainel.has(r.ElementoInterrompido));
+    if(state.selected.abrangenciaFacetPainel.size) rows = rows.filter(r => state.selected.abrangenciaFacetPainel.has(r.Abrangencia));
 
     const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
     if(term){
@@ -1443,6 +1506,11 @@
       const zonaAlvo = Array.from(state.selected.zonaRecid)[0];
       base = base.filter(r => r.Zona === zonaAlvo);
     }
+    if(state.selected.abrangenciaFacetRecid.size) base = base.filter(r => state.selected.abrangenciaFacetRecid.has(r.Abrangencia));
+    if(state.selected.causaFacetRecid.size) base = base.filter(r => state.selected.causaFacetRecid.has(r.CausaPrincipal));
+    if(state.selected.regionalFacetRecid.size) base = base.filter(r => state.selected.regionalFacetRecid.has(r.Regional));
+    if(state.selected.poloFacetRecid.size) base = base.filter(r => state.selected.poloFacetRecid.has(r.Polo));
+    if(state.selected.equipeFacetRecid.size) base = base.filter(r => state.selected.equipeFacetRecid.has(r.Equipe));
 
     const byElement = {};
     base.forEach(r => {
@@ -1862,6 +1930,122 @@
     renderRecidivismPage();
   });
 
+  // ---------- Filtros avançados por coluna (facetas) — genérico para as duas páginas ----------
+  const PAINEL_FACETS = [
+    {key:'TipoOcorrencia', label:'Tipo', set: () => state.selected.tipoFacet},
+    {key:'Zona', label:'Zona', set: () => state.selected.zonaFacetPainel},
+    {key:'Abrangencia', label:'Abrangência', set: () => state.selected.abrangenciaFacetPainel},
+    {key:'CausaPrincipal', label:'Causa', set: () => state.selected.causa},
+    {key:'Regional', label:'Regional', set: () => state.selected.regional},
+    {key:'Polo', label:'Polo', set: () => state.selected.polo},
+    {key:'Localidade', label:'Localidade', set: () => state.selected.localidadeFacet},
+    {key:'Conjunto', label:'Conjunto', set: () => state.selected.conjuntoFacet},
+    {key:'Equipe', label:'Equipe', set: () => state.selected.equipeFacet},
+    {key:'ElementoInterrompido', label:'Elemento Interrompido', set: () => state.selected.elementoFacetPainel},
+  ];
+
+  const RECID_FACETS = [
+    {key:'Zona', label:'Zona', set: () => state.selected.zonaRecid},
+    {key:'Abrangencia', label:'Abrangência', set: () => state.selected.abrangenciaFacetRecid},
+    {key:'CausaPrincipal', label:'Causa', set: () => state.selected.causaFacetRecid},
+    {key:'Regional', label:'Regional', set: () => state.selected.regionalFacetRecid},
+    {key:'Polo', label:'Polo', set: () => state.selected.poloFacetRecid},
+    {key:'Equipe', label:'Equipe', set: () => state.selected.equipeFacetRecid},
+  ];
+
+  function buildFacetValues(rows, key){
+    const vals = new Set();
+    rows.forEach(r => { const v = r[key]; if(v) vals.add(v); });
+    return Array.from(vals).sort();
+  }
+
+  function renderFacetPanel(bodyId, facets, rowsSource, onChange){
+    const el = document.getElementById(bodyId);
+    el.innerHTML = '';
+    facets.forEach(f => {
+      const set_ = f.set();
+      const values = buildFacetValues(rowsSource, f.key);
+      const section = document.createElement('div');
+      section.className = 'cfg-section';
+      const h3 = document.createElement('h3');
+      h3.innerHTML = f.label + ' <span class="badge-count">' + set_.size + '</span>';
+      section.appendChild(h3);
+      const list = document.createElement('div');
+      list.className = 'chip-list';
+      if(values.length === 0){
+        const none = document.createElement('div');
+        none.className = 'hint';
+        none.textContent = 'Nenhum valor disponível ainda.';
+        list.appendChild(none);
+      }
+      values.forEach(v => {
+        const chip = document.createElement('div');
+        chip.className = 'chip' + (set_.has(v) ? ' active' : '');
+        chip.textContent = v;
+        chip.addEventListener('click', () => {
+          if(set_.has(v)) set_.delete(v); else set_.add(v);
+          chip.classList.toggle('active');
+          h3.querySelector('.badge-count').textContent = set_.size;
+          onChange && onChange();
+        });
+        list.appendChild(chip);
+      });
+      section.appendChild(list);
+      el.appendChild(section);
+    });
+  }
+
+  function countActiveFacets(facets){
+    return facets.reduce((s,f) => s + f.set().size, 0);
+  }
+
+  function updateFacetBadge(badgeId, facets){
+    const n = countActiveFacets(facets);
+    const el = document.getElementById(badgeId);
+    el.textContent = n;
+    el.style.display = n > 0 ? 'inline-block' : 'none';
+  }
+
+  // ---- Painel ----
+  const facetOverlayPainel = document.getElementById('facetOverlayPainel');
+  document.getElementById('openFacetBtnPainel').addEventListener('click', () => {
+    renderFacetPanel('facetBodyPainel', PAINEL_FACETS, state.rows, () => updateFacetBadge('facetCountPainel', PAINEL_FACETS));
+    facetOverlayPainel.classList.add('open');
+  });
+  document.getElementById('closeFacetBtnPainel').addEventListener('click', () => facetOverlayPainel.classList.remove('open'));
+  document.getElementById('applyFacetBtnPainel').addEventListener('click', () => {
+    facetOverlayPainel.classList.remove('open');
+    updateFacetBadge('facetCountPainel', PAINEL_FACETS);
+    refresh();
+  });
+  document.getElementById('clearFacetBtnPainel').addEventListener('click', () => {
+    PAINEL_FACETS.forEach(f => f.set().clear());
+    renderFacetPanel('facetBodyPainel', PAINEL_FACETS, state.rows, () => updateFacetBadge('facetCountPainel', PAINEL_FACETS));
+    updateFacetBadge('facetCountPainel', PAINEL_FACETS);
+    refresh();
+  });
+  facetOverlayPainel.addEventListener('click', (e) => { if(e.target === facetOverlayPainel) facetOverlayPainel.classList.remove('open'); });
+
+  // ---- Reincidência ----
+  const facetOverlayRecid = document.getElementById('facetOverlayRecid');
+  document.getElementById('openFacetBtnRecid').addEventListener('click', () => {
+    renderFacetPanel('facetBodyRecid', RECID_FACETS, state.rows, () => updateFacetBadge('facetCountRecid', RECID_FACETS));
+    facetOverlayRecid.classList.add('open');
+  });
+  document.getElementById('closeFacetBtnRecid').addEventListener('click', () => facetOverlayRecid.classList.remove('open'));
+  document.getElementById('applyFacetBtnRecid').addEventListener('click', () => {
+    facetOverlayRecid.classList.remove('open');
+    updateFacetBadge('facetCountRecid', RECID_FACETS);
+    renderRecidivismPage();
+  });
+  document.getElementById('clearFacetBtnRecid').addEventListener('click', () => {
+    RECID_FACETS.forEach(f => f.set().clear());
+    renderFacetPanel('facetBodyRecid', RECID_FACETS, state.rows, () => updateFacetBadge('facetCountRecid', RECID_FACETS));
+    updateFacetBadge('facetCountRecid', RECID_FACETS);
+    renderRecidivismPage();
+  });
+  facetOverlayRecid.addEventListener('click', (e) => { if(e.target === facetOverlayRecid) facetOverlayRecid.classList.remove('open'); });
+
   // ---------- Colunas exibidas na tabela ----------
   function buildColCheckList(){
     const el = document.getElementById('colCheckList');
@@ -2220,6 +2404,10 @@
     state.selected.regional.clear();
     state.selected.polo.clear();
     state.selected.causa.clear();
+    PAINEL_FACETS.forEach(f => f.set().clear());
+    RECID_FACETS.forEach(f => f.set().clear());
+    updateFacetBadge('facetCountPainel', PAINEL_FACETS);
+    updateFacetBadge('facetCountRecid', RECID_FACETS);
     applySmartDayDefaults();
     state.selected.zonaRecid = new Set(['UB','RR']);
     renderZonaPills();
